@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r, include = FALSE}
-x <- c("lme4", "glmerTest", "dplyr", "sjPlot", "gstat", "knitr")
+x <- c("lme4", "lmerTest", "dplyr", "sjPlot", "gstat", "knitr")
 lapply(x, require, character.only = TRUE)
 
 # Data setup
@@ -22,12 +22,11 @@ surv <- surv %>% group_by(species) %>% mutate(BAh5_s = scale(BAh5_d),
 surv$BAc5_s <- ifelse(is.na(surv$BAc5_s), 0, surv$BAc5_s)
 surv$BAh5_s <- ifelse(is.na(surv$BAh5_s), 0, surv$BAh5_s)
 colnames(surv)[colnames(surv) == "alt"] <- "elev"
-colnames(surv)[colnames(surv) == "tecat"] <- "fert"
 
-toscale <- c("diam1", "elev", "gap", "org", "fert")
+toscale <- c("diam1", "elev", "gap", "org", "cations")
 surv <- surv %>% ungroup()
 surv[, toscale] <- scale(surv[, toscale])
-surv %>% select(toscale) %>% summarise_all(funs(mean), na.rm=TRUE)
+surv %>% select(toscale) %>% summarise_all(list(mean), na.rm=TRUE)
 surv %>% select(toscale) %>% summarise_all(funs(sd), na.rm=TRUE)
 ```
 
@@ -117,29 +116,29 @@ tab_model(org.add.all5, pred.labels = c("(Intercept)", "Diameter", "Organic", "H
 <br>
 <br>
 
-### FERTILITY PROXY at 5m scale
+### CATIONS at 5m scale
 
 ```{r, include = FALSE}
 # run all competing models
-fert.null <- glmer(surv ~ diam1 + fert +
+cations.null <- glmer(surv ~ diam1 + cations +
                 (1|species), 
                family = binomial(link = "logit"),
                data = surv)
-fert.add.het5 <- update(fert.null, .~. + BAh5_s)
-fert.add.all5 <- update(fert.add.het5, .~. + BAc5_s)
-fert.int.het5 <- update(fert.add.all5, .~. + BAh5_s*fert)
-fert.int.all5 <- update(fert.int.het5, .~. + BAc5_s*fert)
+cations.add.het5 <- update(cations.null, .~. + BAh5_s)
+cations.add.all5 <- update(cations.add.het5, .~. + BAc5_s)
+cations.int.het5 <- update(cations.add.all5, .~. + BAh5_s*cations)
+cations.int.all5 <- update(cations.int.het5, .~. + BAc5_s*cations)
 ```
 
 ```{r, message = FALSE}
-comp.tab.fert5 <- anova(fert.null, fert.add.het5, fert.add.all5, fert.int.het5, fert.int.all5)
-comp.tab.fert5 <- comp.tab.fert5[, c("AIC", "Pr(>Chisq)")]
-kable(comp.tab.fert5)
+comp.tab.cations5 <- anova(cations.null, cations.add.het5, cations.add.all5, cations.int.het5, cations.int.all5)
+comp.tab.cations5 <- comp.tab.cations5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations5)
 ```
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(fert.add.all5, pred.labels = c("(Intercept)", "Diameter", "Fertility", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 5m scale: Additive model with all terms")
+tab_model(cations.add.all5, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "CATIONS at 5m scale: Additive model with all terms")
 ```
 
 <br>
@@ -229,25 +228,25 @@ tab_model(org.add.all10, pred.labels = c("(Intercept)", "Diameter", "Organic", "
 <br>
 <br>
 
-### FERTILITY PROXY at 10m scale
+### CATIONS at 10m scale
 
 ```{r, include = FALSE}
 # run all competing models
-fert.add.het10 <- update(fert.null, .~. + BAh10_s)
-fert.add.all10 <- update(fert.add.het10, .~. + BAc10_s)
-fert.int.het10 <- update(fert.add.all10, .~. + BAh10_s*fert)
-fert.int.all10 <- update(fert.int.het10, .~. + BAc10_s*fert)
+cations.add.het10 <- update(cations.null, .~. + BAh10_s)
+cations.add.all10 <- update(cations.add.het10, .~. + BAc10_s)
+cations.int.het10 <- update(cations.add.all10, .~. + BAh10_s*cations)
+cations.int.all10 <- update(cations.int.het10, .~. + BAc10_s*cations)
 ```
 
 ```{r, message = FALSE}
-comp.tab.fert10 <- anova(fert.null, fert.add.het10, fert.add.all10, fert.int.het10, fert.int.all10)
-comp.tab.fert10 <- comp.tab.fert10[, c("AIC", "Pr(>Chisq)")]
-kable(comp.tab.fert10)
+comp.tab.cations10 <- anova(cations.null, cations.add.het10, cations.add.all10, cations.int.het10, cations.int.all10)
+comp.tab.cations10 <- comp.tab.cations10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations10)
 ```
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(fert.add.all10, pred.labels = c("(Intercept)", "Diameter", "Fertility", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 10m scale: Additive model with all terms")
+tab_model(cations.add.all10, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "CATIONS at 10m scale: Additive model with all terms")
 ```
 
 <br>
@@ -337,25 +336,25 @@ tab_model(org.null, pred.labels = c("(Intercept)", "Diameter", "Organic"), dv.la
 <br>
 <br>
 
-### FERTILITY PROXY at 15m scale
+### CATIONS at 15m scale
 
 ```{r, include = FALSE}
 # run all competing models
-fert.add.het15 <- update(fert.null, .~. + BAh15_s)
-fert.add.all15 <- update(fert.add.het15, .~. + BAc15_s)
-fert.int.het15 <- update(fert.add.all15, .~. + BAh15_s*fert)
-fert.int.all15 <- update(fert.int.het15, .~. + BAc15_s*fert)
+cations.add.het15 <- update(cations.null, .~. + BAh15_s)
+cations.add.all15 <- update(cations.add.het15, .~. + BAc15_s)
+cations.int.het15 <- update(cations.add.all15, .~. + BAh15_s*cations)
+cations.int.all15 <- update(cations.int.het15, .~. + BAc15_s*cations)
 ```
 
 ```{r, message = FALSE}
-comp.tab.fert15 <- anova(fert.null, fert.add.het15, fert.add.all15, fert.int.het15, fert.int.all15)
-comp.tab.fert15 <- comp.tab.fert15[, c("AIC", "Pr(>Chisq)")]
-kable(comp.tab.fert15)
+comp.tab.cations15 <- anova(cations.null, cations.add.het15, cations.add.all15, cations.int.het15, cations.int.all15)
+comp.tab.cations15 <- comp.tab.cations15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations15)
 ```
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(fert.null, pred.labels = c("(Intercept)", "Diameter", "Fertility"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 15m scale: Null model")
+tab_model(cations.null, pred.labels = c("(Intercept)", "Diameter", "Cations"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "CATIONS at 15m scale: Null model")
 ```
 
 <br>
@@ -445,25 +444,25 @@ tab_model(org.null, pred.labels = c("(Intercept)", "Diameter", "Organic"), dv.la
 <br>
 <br>
 
-### FERTILITY PROXY at 20m scale
+### CATIONS at 20m scale
 
 ```{r, include = FALSE}
 # run all competing models
-fert.add.het20 <- update(fert.null, .~. + BAh20_s)
-fert.add.all20 <- update(fert.add.het20, .~. + BAc20_s)
-fert.int.het20 <- update(fert.add.all20, .~. + BAh20_s*fert)
-fert.int.all20 <- update(fert.int.het20, .~. + BAc20_s*fert)
+cations.add.het20 <- update(cations.null, .~. + BAh20_s)
+cations.add.all20 <- update(cations.add.het20, .~. + BAc20_s)
+cations.int.het20 <- update(cations.add.all20, .~. + BAh20_s*cations)
+cations.int.all20 <- update(cations.int.het20, .~. + BAc20_s*cations)
 ```
 
 ```{r, message = FALSE}
-comp.tab.fert20 <- anova(fert.null, fert.add.het20, fert.add.all20, fert.int.het20, fert.int.all20)
-comp.tab.fert20 <- comp.tab.fert20[, c("AIC", "Pr(>Chisq)")]
-kable(comp.tab.fert20)
+comp.tab.cations20 <- anova(cations.null, cations.add.het20, cations.add.all20, cations.int.het20, cations.int.all20)
+comp.tab.cations20 <- comp.tab.cations20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations20)
 ```
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(fert.null, pred.labels = c("(Intercept)", "Diameter", "Fertility"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 20m scale: Null model")
+tab_model(cations.null, pred.labels = c("(Intercept)", "Diameter", "Cations"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "CATIONS at 20m scale: Null model")
 ```
 
 <br>
@@ -477,33 +476,33 @@ TESTING FOR SPATIAL AUTOCORRELATION
 ge.vgm <- variogram(resid(elev.int.het5)~1, loc= ~X+Y, data = surv)
 gg.vgm <- variogram(resid(gap.int.het5)~1, loc= ~X+Y, data = surv)
 go.vgm <- variogram(resid(org.add.all5)~1, loc= ~X+Y, data = surv)
-gf.vgm <- variogram(resid(fert.add.all5)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(cations.add.all5)~1, loc= ~X+Y, data = surv)
 
 plot(ge.vgm, main="Elevation, interactive with het BA, 5m scale")
 plot(gg.vgm, main="Gap measure, interactive with het BA, 5m scale")
 plot(go.vgm, main="Soil organic matter, \nadditive, 5m scale")
-plot(gf.vgm, main="Fertility proxy, \nadditive, 5m scale")
+plot(gf.vgm, main="CATIONS, \nadditive, 5m scale")
 
 
 ge.vgm <- variogram(resid(elev.add.all10)~1, loc= ~X+Y, data = surv)
 gg.vgm <- variogram(resid(gap.add.all10)~1, loc= ~X+Y, data = surv)
 go.vgm <- variogram(resid(org.add.all10)~1, loc= ~X+Y, data = surv)
-gf.vgm <- variogram(resid(fert.add.all10)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(cations.add.all10)~1, loc= ~X+Y, data = surv)
 
 plot(ge.vgm, main="Elevation, additive, 10m scale")
 plot(gg.vgm, main="Gap measure, additive, 10m scale")
 plot(go.vgm, main="Soil organic matter, \nadditive, 10m scale")
-plot(gf.vgm, main="Fertility proxy, \nadditive, 10m scale")
+plot(gf.vgm, main="CATIONS, \nadditive, 10m scale")
 
 
 ge.vgm <- variogram(resid(elev.null)~1, loc= ~X+Y, data = surv)
 gg.vgm <- variogram(resid(gap.null)~1, loc= ~X+Y, data = surv)
 go.vgm <- variogram(resid(org.null)~1, loc= ~X+Y, data = surv)
-gf.vgm <- variogram(resid(fert.null)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(cations.null)~1, loc= ~X+Y, data = surv)
 
 plot(ge.vgm, main="Elevation, Null model")
 plot(gg.vgm, main="Gap measure, Null model")
 plot(go.vgm, main="Soil organic matter, Null model")
-plot(gf.vgm, main="Fertility proxy, Null model")
+plot(gf.vgm, main="CATIONS, Null model")
 ```
 
