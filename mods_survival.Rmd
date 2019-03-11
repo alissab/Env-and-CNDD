@@ -1,0 +1,509 @@
+---
+title: "Brown et al. Survival models"
+author: "Alissa Brown"
+date: "February 28, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include = FALSE}
+x <- c("lme4", "glmerTest", "dplyr", "sjPlot", "gstat", "knitr")
+lapply(x, require, character.only = TRUE)
+
+# Data setup
+surv <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
+surv$BAc5_d <- surv$BAc5 / (pi*(5^2))
+surv$BAh5_d <- surv$BAh5 / (pi*(5^2))
+surv <- surv %>% group_by(species) %>% mutate(BAh5_s = scale(BAh5_d), 
+                                              BAc5_s = scale(BAc5_d))
+surv$BAc5_s <- ifelse(is.na(surv$BAc5_s), 0, surv$BAc5_s)
+surv$BAh5_s <- ifelse(is.na(surv$BAh5_s), 0, surv$BAh5_s)
+colnames(surv)[colnames(surv) == "alt"] <- "elev"
+colnames(surv)[colnames(surv) == "tecat"] <- "fert"
+
+toscale <- c("diam1", "elev", "gap", "org", "fert")
+surv <- surv %>% ungroup()
+surv[, toscale] <- scale(surv[, toscale])
+surv %>% select(toscale) %>% summarise_all(funs(mean), na.rm=TRUE)
+surv %>% select(toscale) %>% summarise_all(funs(sd), na.rm=TRUE)
+```
+
+Starting with 5m spatial scale: Run survival models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
+
+### ELEVATION at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+elev.null <- glmer(surv ~ diam1 + elev +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+elev.add.het5 <- update(elev.null, .~. + BAh5_s)
+elev.add.all5 <- update(elev.add.het5, .~. + BAc5_s)
+elev.int.het5 <- update(elev.add.all5, .~. + BAh5_s*elev)
+elev.int.all5 <- update(elev.int.het5, .~. + BAc5_s*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev5 <- anova(elev.null, elev.add.het5, elev.add.all5, elev.int.het5, elev.int.all5)
+comp.tab.elev5 <- comp.tab.elev5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.int.het5, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 5m", "Con BA at 5m", "Het BA * elevation"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 5m scale: interactive model with Het BA")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.null <- glmer(surv ~ diam1 + gap +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+gap.add.het5 <- update(gap.null, .~. + BAh5_s)
+gap.add.all5 <- update(gap.add.het5, .~. + BAc5_s)
+gap.int.het5 <- update(gap.add.all5, .~. + BAh5_s*gap)
+gap.int.all5 <- update(gap.int.het5, .~. + BAc5_s*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap5 <- anova(gap.null, gap.add.het5, gap.add.all5, gap.int.het5, gap.int.all5)
+comp.tab.gap5 <- comp.tab.gap5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.int.het5, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 5m", "Con BA at 5m", "Het BA * gap"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 5m scale: Interactive with het BA")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.null <- glmer(surv ~ diam1 + org +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+org.add.het5 <- update(org.null, .~. + BAh5_s)
+org.add.all5 <- update(org.add.het5, .~. + BAc5_s)
+org.int.het5 <- update(org.add.all5, .~. + BAh5_s*org)
+org.int.all5 <- update(org.int.het5, .~. + BAc5_s*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org5 <- anova(org.null, org.add.het5, org.add.all5, org.int.het5, org.int.all5)
+comp.tab.org5 <- comp.tab.org5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.add.all5, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 5m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+
+### FERTILITY PROXY at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+fert.null <- glmer(surv ~ diam1 + fert +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+fert.add.het5 <- update(fert.null, .~. + BAh5_s)
+fert.add.all5 <- update(fert.add.het5, .~. + BAc5_s)
+fert.int.het5 <- update(fert.add.all5, .~. + BAh5_s*fert)
+fert.int.all5 <- update(fert.int.het5, .~. + BAc5_s*fert)
+```
+
+```{r, message = FALSE}
+comp.tab.fert5 <- anova(fert.null, fert.add.het5, fert.add.all5, fert.int.het5, fert.int.all5)
+comp.tab.fert5 <- comp.tab.fert5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.fert5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(fert.add.all5, pred.labels = c("(Intercept)", "Diameter", "Fertility", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 5m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 10m scale
+
+```{r}
+surv$BAc10_d <- surv$BAc10 / (pi*(10^2))
+surv$BAh10_d <- surv$BAh10 / (pi*(10^2))
+surv <- surv %>% group_by(species) %>% mutate(BAh10_s = scale(BAh10_d), 
+                                              BAc10_s = scale(BAc10_d))
+surv$BAc10_s <- ifelse(is.na(surv$BAc10_s), 0, surv$BAc10_s)
+surv$BAh10_s <- ifelse(is.na(surv$BAh10_s), 0, surv$BAh10_s)
+surv <- surv %>% ungroup()
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het10 <- update(elev.null, .~. + BAh10_s)
+elev.add.all10 <- update(elev.add.het10, .~. + BAc10_s)
+elev.int.het10 <- update(elev.add.all10, .~. + BAh10_s*elev)
+elev.int.all10 <- update(elev.int.het10, .~. + BAc10_s*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev10 <- anova(elev.null, elev.add.het10, elev.add.all10, elev.int.het10, elev.int.all10)
+comp.tab.elev10 <- comp.tab.elev10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.add.all10, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 10m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het10 <- update(gap.null, .~. + BAh10_s)
+gap.add.all10 <- update(gap.add.het10, .~. + BAc10_s)
+gap.int.het10 <- update(gap.add.all10, .~. + BAh10_s*gap)
+gap.int.all10 <- update(gap.int.het10, .~. + BAc10_s*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap10 <- anova(gap.null, gap.add.het10, gap.add.all10, gap.int.het10, gap.int.all10)
+comp.tab.gap10 <- comp.tab.gap10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.add.all10, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 10m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het10 <- update(org.null, .~. + BAh10_s)
+org.add.all10 <- update(org.add.het10, .~. + BAc10_s)
+org.int.het10 <- update(org.add.all10, .~. + BAh10_s*org)
+org.int.all10 <- update(org.int.het10, .~. + BAc10_s*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org10 <- anova(org.null, org.add.het10, org.add.all10, org.int.het10, org.int.all10)
+comp.tab.org10 <- comp.tab.org10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.add.all10, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 10m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+
+### FERTILITY PROXY at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+fert.add.het10 <- update(fert.null, .~. + BAh10_s)
+fert.add.all10 <- update(fert.add.het10, .~. + BAc10_s)
+fert.int.het10 <- update(fert.add.all10, .~. + BAh10_s*fert)
+fert.int.all10 <- update(fert.int.het10, .~. + BAc10_s*fert)
+```
+
+```{r, message = FALSE}
+comp.tab.fert10 <- anova(fert.null, fert.add.het10, fert.add.all10, fert.int.het10, fert.int.all10)
+comp.tab.fert10 <- comp.tab.fert10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.fert10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(fert.add.all10, pred.labels = c("(Intercept)", "Diameter", "Fertility", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 10m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 15m scale
+
+```{r}
+surv$BAc15_d <- surv$BAc15 / (pi*(15^2))
+surv$BAh15_d <- surv$BAh15 / (pi*(15^2))
+surv <- surv %>% group_by(species) %>% mutate(BAh15_s = scale(BAh15_d), 
+                                              BAc15_s = scale(BAc15_d))
+surv$BAc15_s <- ifelse(is.na(surv$BAc15_s), 0, surv$BAc15_s)
+surv$BAh15_s <- ifelse(is.na(surv$BAh15_s), 0, surv$BAh15_s)
+surv <- surv %>% ungroup()
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het15 <- update(elev.null, .~. + BAh15_s)
+elev.add.all15 <- update(elev.add.het15, .~. + BAc15_s)
+elev.int.het15 <- update(elev.add.all15, .~. + BAh15_s*elev)
+elev.int.all15 <- update(elev.int.het15, .~. + BAc15_s*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev15 <- anova(elev.null, elev.add.het15, elev.add.all15, elev.int.het15, elev.int.all15)
+comp.tab.elev15 <- comp.tab.elev15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.null, pred.labels = c("(Intercept)", "Diameter", "Elevation"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 15m scale: Null model")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het15 <- update(gap.null, .~. + BAh15_s)
+gap.add.all15 <- update(gap.add.het15, .~. + BAc15_s)
+gap.int.het15 <- update(gap.add.all15, .~. + BAh15_s*gap)
+gap.int.all15 <- update(gap.int.het15, .~. + BAc15_s*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap15 <- anova(gap.null, gap.add.het15, gap.add.all15, gap.int.het15, gap.int.all15)
+comp.tab.gap15 <- comp.tab.gap15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.null, pred.labels = c("(addercept)", "Diameter", "Gap"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 15m scale: Null model")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het15 <- update(org.null, .~. + BAh15_s)
+org.add.all15 <- update(org.add.het15, .~. + BAc15_s)
+org.int.het15 <- update(org.add.all15, .~. + BAh15_s*org)
+org.int.all15 <- update(org.int.het15, .~. + BAc15_s*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org15 <- anova(org.null, org.add.het15, org.add.all15, org.int.het15, org.int.all15)
+comp.tab.org15 <- comp.tab.org15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.null, pred.labels = c("(Intercept)", "Diameter", "Organic"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 15m scale: Null model")
+```
+
+<br>
+<br>
+
+### FERTILITY PROXY at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+fert.add.het15 <- update(fert.null, .~. + BAh15_s)
+fert.add.all15 <- update(fert.add.het15, .~. + BAc15_s)
+fert.int.het15 <- update(fert.add.all15, .~. + BAh15_s*fert)
+fert.int.all15 <- update(fert.int.het15, .~. + BAc15_s*fert)
+```
+
+```{r, message = FALSE}
+comp.tab.fert15 <- anova(fert.null, fert.add.het15, fert.add.all15, fert.int.het15, fert.int.all15)
+comp.tab.fert15 <- comp.tab.fert15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.fert15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(fert.null, pred.labels = c("(Intercept)", "Diameter", "Fertility"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 15m scale: Null model")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 20m scale
+
+```{r}
+surv$BAc20_d <- surv$BAc20 / (pi*(20^2))
+surv$BAh20_d <- surv$BAh20 / (pi*(20^2))
+surv <- surv %>% group_by(species) %>% mutate(BAh20_s = scale(BAh20_d), 
+                                              BAc20_s = scale(BAc20_d))
+surv$BAc20_s <- ifelse(is.na(surv$BAc20_s), 0, surv$BAc20_s)
+surv$BAh20_s <- ifelse(is.na(surv$BAh20_s), 0, surv$BAh20_s)
+surv <- surv %>% ungroup()
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het20 <- update(elev.null, .~. + BAh20_s)
+elev.add.all20 <- update(elev.add.het20, .~. + BAc20_s)
+elev.int.het20 <- update(elev.add.all20, .~. + BAh20_s*elev)
+elev.int.all20 <- update(elev.int.het20, .~. + BAc20_s*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev20 <- anova(elev.null, elev.add.het20, elev.add.all20, elev.int.het20, elev.int.all20)
+comp.tab.elev20 <- comp.tab.elev20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.null, pred.labels = c("(Intercept)", "Diameter", "Elevation"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 20m scale: Null model")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het20 <- update(gap.null, .~. + BAh20_s)
+gap.add.all20 <- update(gap.add.het20, .~. + BAc20_s)
+gap.int.het20 <- update(gap.add.all20, .~. + BAh20_s*gap)
+gap.int.all20 <- update(gap.int.het20, .~. + BAc20_s*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap20 <- anova(gap.null, gap.add.het20, gap.add.all20, gap.int.het20, gap.int.all20)
+comp.tab.gap20 <- comp.tab.gap20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.null, pred.labels = c("(addercept)", "Diameter", "Gap"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 20m scale: Null model")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het20 <- update(org.null, .~. + BAh20_s)
+org.add.all20 <- update(org.add.het20, .~. + BAc20_s)
+org.int.het20 <- update(org.add.all20, .~. + BAh20_s*org)
+org.int.all20 <- update(org.int.het20, .~. + BAc20_s*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org20 <- anova(org.null, org.add.het20, org.add.all20, org.int.het20, org.int.all20)
+comp.tab.org20 <- comp.tab.org20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.null, pred.labels = c("(Intercept)", "Diameter", "Organic"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 20m scale: Null model")
+```
+
+<br>
+<br>
+
+### FERTILITY PROXY at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+fert.add.het20 <- update(fert.null, .~. + BAh20_s)
+fert.add.all20 <- update(fert.add.het20, .~. + BAc20_s)
+fert.int.het20 <- update(fert.add.all20, .~. + BAh20_s*fert)
+fert.int.all20 <- update(fert.int.het20, .~. + BAc20_s*fert)
+```
+
+```{r, message = FALSE}
+comp.tab.fert20 <- anova(fert.null, fert.add.het20, fert.add.all20, fert.int.het20, fert.int.all20)
+comp.tab.fert20 <- comp.tab.fert20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.fert20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(fert.null, pred.labels = c("(Intercept)", "Diameter", "Fertility"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Fertility proxy at 20m scale: Null model")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+TESTING FOR SPATIAL AUTOCORRELATION
+
+```{r, message = FALSE}
+ge.vgm <- variogram(resid(elev.int.het5)~1, loc= ~X+Y, data = surv)
+gg.vgm <- variogram(resid(gap.int.het5)~1, loc= ~X+Y, data = surv)
+go.vgm <- variogram(resid(org.add.all5)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(fert.add.all5)~1, loc= ~X+Y, data = surv)
+
+plot(ge.vgm, main="Elevation, interactive with het BA, 5m scale")
+plot(gg.vgm, main="Gap measure, interactive with het BA, 5m scale")
+plot(go.vgm, main="Soil organic matter, \nadditive, 5m scale")
+plot(gf.vgm, main="Fertility proxy, \nadditive, 5m scale")
+
+
+ge.vgm <- variogram(resid(elev.add.all10)~1, loc= ~X+Y, data = surv)
+gg.vgm <- variogram(resid(gap.add.all10)~1, loc= ~X+Y, data = surv)
+go.vgm <- variogram(resid(org.add.all10)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(fert.add.all10)~1, loc= ~X+Y, data = surv)
+
+plot(ge.vgm, main="Elevation, additive, 10m scale")
+plot(gg.vgm, main="Gap measure, additive, 10m scale")
+plot(go.vgm, main="Soil organic matter, \nadditive, 10m scale")
+plot(gf.vgm, main="Fertility proxy, \nadditive, 10m scale")
+
+
+ge.vgm <- variogram(resid(elev.null)~1, loc= ~X+Y, data = surv)
+gg.vgm <- variogram(resid(gap.null)~1, loc= ~X+Y, data = surv)
+go.vgm <- variogram(resid(org.null)~1, loc= ~X+Y, data = surv)
+gf.vgm <- variogram(resid(fert.null)~1, loc= ~X+Y, data = surv)
+
+plot(ge.vgm, main="Elevation, Null model")
+plot(gg.vgm, main="Gap measure, Null model")
+plot(go.vgm, main="Soil organic matter, Null model")
+plot(gf.vgm, main="Fertility proxy, Null model")
+```
+

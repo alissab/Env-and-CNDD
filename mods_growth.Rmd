@@ -1,0 +1,789 @@
+---
+title: "Brown et al. Growth models"
+author: "Alissa Brown"
+date: "February 28, 2019"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include = FALSE}
+x <- c("lme4", "lmerTest", "dplyr", "sjPlot", "gstat", "knitr")
+lapply(x, require, character.only = TRUE)
+
+# Data setup
+growth <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
+growth <- growth[!is.na(growth$growth),]  # only return rows for saplings that have a growth rate
+growth <- growth[growth$growth<=1,]   # remove probable measurement errors
+growth$growth <- ifelse(growth$growth<0, 0, growth$growth)   # convert negative growth rates to "0"
+growth$BAc5_d <- growth$BAc5 / (pi*(5^2))
+growth$BAh5_d <- growth$BAh5 / (pi*(5^2))
+colnames(growth)[colnames(growth) == "alt"] <- "elev"
+```
+
+Starting with 5m spatial scale: Run growth models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
+
+### ELEVATION at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+elev.null <- lmer(log(growth+1) ~ diam1 + elev +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+elev.add.het5 <- update(elev.null, .~. + BAh5_d)
+elev.add.all5 <- update(elev.add.het5, .~. + BAc5_d)
+elev.int.het5 <- update(elev.add.all5, .~. + BAh5_d*elev)
+elev.int.all5 <- update(elev.int.het5, .~. + BAc5_d*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev5 <- anova(elev.null, elev.add.het5, elev.add.all5, elev.int.het5, elev.int.all5)
+comp.tab.elev5 <- comp.tab.elev5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.add.all.REML5 <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh5_d + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(elev.add.all.REML5), growth$diam1)
+plot(residuals(elev.add.all.REML5), growth$elev)
+plot(residuals(elev.add.all.REML5), growth$BAh5_d)
+plot(residuals(elev.add.all.REML5), growth$BAc5_d)
+plot(elev.add.all.REML5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.add.all.REML5, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 5m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.null <- lmer(log(growth+1) ~ diam1 + gap +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+gap.add.het5 <- update(gap.null, .~. + BAh5_d)
+gap.add.all5 <- update(gap.add.het5, .~. + BAc5_d)
+gap.int.het5 <- update(gap.add.all5, .~. + BAh5_d*gap)
+gap.int.all5 <- update(gap.int.het5, .~. + BAc5_d*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap5 <- anova(gap.null, gap.add.het5, gap.add.all5, gap.int.het5, gap.int.all5)
+comp.tab.gap5 <- comp.tab.gap5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.int.het.REML5 <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh5_d*gap + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(gap.int.het.REML5), growth$diam1)
+plot(residuals(gap.int.het.REML5), growth$gap)
+plot(residuals(gap.int.het.REML5), growth$BAh5_d)
+plot(residuals(gap.int.het.REML5), growth$BAc5_d)
+plot(gap.int.het.REML5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.int.het.REML5, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 5m", "Con BA at 5m", "Het BA * gap"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 5m scale: Interactive with het BA")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.null <- lmer(log(growth+1) ~ diam1 + org +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+org.add.het5 <- update(org.null, .~. + BAh5_d)
+org.add.all5 <- update(org.add.het5, .~. + BAc5_d)
+org.int.het5 <- update(org.add.all5, .~. + BAh5_d*org)
+org.int.all5 <- update(org.int.het5, .~. + BAc5_d*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org5 <- anova(org.null, org.add.het5, org.add.all5, org.int.het5, org.int.all5)
+comp.tab.org5 <- comp.tab.org5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.int.het.REML5 <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh5_d*org + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(org.int.het.REML5), growth$diam1)
+plot(residuals(org.int.het.REML5), growth$org)
+plot(residuals(org.int.het.REML5), growth$BAh5_d)
+plot(residuals(org.int.het.REML5), growth$BAc5_d)
+plot(org.int.het.REML5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.int.het.REML5, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 5m", "Con BA at 5m", "Het BA * organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 5m scale: Interactive with het BA")
+```
+
+<br>
+<br>
+
+### SOIL CATIONS 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.null <- lmer(log(growth+1) ~ diam1 + cations +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+cations.add.het5 <- update(cations.null, .~. + BAh5_d)
+cations.add.all5 <- update(cations.add.het5, .~. + BAc5_d)
+cations.int.het5 <- update(cations.add.all5, .~. + BAh5_d*cations)
+cations.int.all5 <- update(cations.int.het5, .~. + BAc5_d*cations)
+```
+
+```{r, message = FALSE}
+comp.tab.cations5 <- anova(cations.null, cations.add.het5, cations.add.all5, cations.int.het5, cations.int.all5)
+comp.tab.cations5 <- comp.tab.cations5[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.add.all.REML5 <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh5_d + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(cations.add.all.REML5), growth$diam1)
+plot(residuals(cations.add.all.REML5), growth$cations)
+plot(residuals(cations.add.all.REML5), growth$BAh5_d)
+plot(residuals(cations.add.all.REML5), growth$BAc5_d)
+plot(cations.add.all.REML5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.add.all.REML5, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 5m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 10m scale
+
+```{r}
+growth$BAc10_d <- growth$BAc10 / (pi*(10^2))
+growth$BAh10_d <- growth$BAh10 / (pi*(10^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het10 <- update(elev.null, .~. + BAh10_d)
+elev.add.all10 <- update(elev.add.het10, .~. + BAc10_d)
+elev.int.het10 <- update(elev.add.all10, .~. + BAh10_d*elev)
+elev.int.all10 <- update(elev.int.het10, .~. + BAc10_d*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev10 <- anova(elev.null, elev.add.het10, elev.add.all10, elev.int.het10, elev.int.all10)
+comp.tab.elev10 <- comp.tab.elev10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.add.all.REML10 <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(elev.add.all.REML10), growth$diam1)
+plot(residuals(elev.add.all.REML10), growth$elev)
+plot(residuals(elev.add.all.REML10), growth$BAh10_d)
+plot(residuals(elev.add.all.REML10), growth$BAc10_d)
+plot(elev.add.all.REML10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.add.all.REML10, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 10m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het10 <- update(gap.null, .~. + BAh10_d)
+gap.add.all10 <- update(gap.add.het10, .~. + BAc10_d)
+gap.int.het10 <- update(gap.add.all10, .~. + BAh10_d*gap)
+gap.int.all10 <- update(gap.int.het10, .~. + BAc10_d*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap10 <- anova(gap.null, gap.add.het10, gap.add.all10, gap.int.het10, gap.int.all10)
+comp.tab.gap10 <- comp.tab.gap10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.int.all.REML10 <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh10_d*gap + BAc10_d*gap +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(gap.int.all.REML10), growth$diam1)
+plot(residuals(gap.int.all.REML10), growth$gap)
+plot(residuals(gap.int.all.REML10), growth$BAh10_d)
+plot(residuals(gap.int.all.REML10), growth$BAc10_d)
+plot(gap.int.all.REML10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.int.all.REML10, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 10m", "Con BA at 10m", "Het BA * gap", "Con BA * gap"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 10m scale: Interactive with con & het BA")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het10 <- update(org.null, .~. + BAh10_d)
+org.add.all10 <- update(org.add.het10, .~. + BAc10_d)
+org.int.het10 <- update(org.add.all10, .~. + BAh10_d*org)
+org.int.all10 <- update(org.int.het10, .~. + BAc10_d*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org10 <- anova(org.null, org.add.het10, org.add.all10, org.int.het10, org.int.all10)
+comp.tab.org10 <- comp.tab.org10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.add.all.REML10 <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(org.add.all.REML10), growth$diam1)
+plot(residuals(org.add.all.REML10), growth$org)
+plot(residuals(org.add.all.REML10), growth$BAh10_d)
+plot(residuals(org.add.all.REML10), growth$BAc10_d)
+plot(org.add.all.REML10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.add.all.REML10, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 10m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+
+### CATIONS 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.add.het10 <- update(cations.null, .~. + BAh10_d)
+cations.add.all10 <- update(cations.add.het10, .~. + BAc10_d)
+cations.int.het10 <- update(cations.add.all10, .~. + BAh10_d*cations)
+cations.int.all10 <- update(cations.int.het10, .~. + BAc10_d*cations)
+```
+
+```{r, message = FALSE}
+comp.tab.cations10 <- anova(cations.null, cations.add.het10, cations.add.all10, cations.int.het10, cations.int.all10)
+comp.tab.cations10 <- comp.tab.cations10[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.add.all.REML10 <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(cations.add.all.REML10), growth$diam1)
+plot(residuals(cations.add.all.REML10), growth$cations)
+plot(residuals(cations.add.all.REML10), growth$BAh10_d)
+plot(residuals(cations.add.all.REML10), growth$BAc10_d)
+plot(cations.add.all.REML10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.add.all.REML10, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 10m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 15m scale
+
+```{r}
+growth$BAc15_d <- growth$BAc15 / (pi*(15^2))
+growth$BAh15_d <- growth$BAh15 / (pi*(15^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het15 <- update(elev.null, .~. + BAh15_d)
+elev.add.all15 <- update(elev.add.het15, .~. + BAc15_d)
+elev.int.het15 <- update(elev.add.all15, .~. + BAh15_d*elev)
+elev.int.all15 <- update(elev.int.het15, .~. + BAc15_d*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev15 <- anova(elev.null, elev.add.het15, elev.add.all15, elev.int.het15, elev.int.all15)
+comp.tab.elev15 <- comp.tab.elev15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.add.all.REML15 <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh15_d + BAc15_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(elev.add.all.REML15), growth$diam1)
+plot(residuals(elev.add.all.REML15), growth$elev)
+plot(residuals(elev.add.all.REML15), growth$BAh15_d)
+plot(residuals(elev.add.all.REML15), growth$BAc15_d)
+plot(elev.add.all.REML15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.add.all.REML15, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 15m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het15 <- update(gap.null, .~. + BAh15_d)
+gap.add.all15 <- update(gap.add.het15, .~. + BAc15_d)
+gap.int.het15 <- update(gap.add.all15, .~. + BAh15_d*gap)
+gap.int.all15 <- update(gap.int.het15, .~. + BAc15_d*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap15 <- anova(gap.null, gap.add.het15, gap.add.all15, gap.int.het15, gap.int.all15)
+comp.tab.gap15 <- comp.tab.gap15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.add.all.REML15 <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh15_d + BAc15_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(gap.add.all.REML15), growth$diam1)
+plot(residuals(gap.add.all.REML15), growth$gap)
+plot(residuals(gap.add.all.REML15), growth$BAh15_d)
+plot(residuals(gap.add.all.REML15), growth$BAc15_d)
+plot(gap.add.all.REML15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.add.all.REML15, pred.labels = c("(addercept)", "Diameter", "Gap", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 15m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het15 <- update(org.null, .~. + BAh15_d)
+org.add.all15 <- update(org.add.het15, .~. + BAc15_d)
+org.int.het15 <- update(org.add.all15, .~. + BAh15_d*org)
+org.int.all15 <- update(org.int.het15, .~. + BAc15_d*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org15 <- anova(org.null, org.add.het15, org.add.all15, org.int.het15, org.int.all15)
+comp.tab.org15 <- comp.tab.org15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.int.het.REML15 <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh15_d*org + BAc15_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(org.int.het.REML15), growth$diam1)
+plot(residuals(org.int.het.REML15), growth$org)
+plot(residuals(org.int.het.REML15), growth$BAh15_d)
+plot(residuals(org.int.het.REML15), growth$BAc15_d)
+plot(org.int.het.REML15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.int.het.REML15, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 15m", "Con BA at 15m", "Het BA * organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 15m scale: Interactive model with Het BA")
+```
+
+<br>
+<br>
+
+### CATIONS 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.add.het15 <- update(cations.null, .~. + BAh15_d)
+cations.add.all15 <- update(cations.add.het15, .~. + BAc15_d)
+cations.int.het15 <- update(cations.add.all15, .~. + BAh15_d*cations)
+cations.int.all15 <- update(cations.int.het15, .~. + BAc15_d*cations)
+```
+
+```{r, message = FALSE}
+comp.tab.cations15 <- anova(cations.null, cations.add.het15, cations.add.all15, cations.int.het15, cations.int.all15)
+comp.tab.cations15 <- comp.tab.cations15[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.int.all.REML15 <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh15_d*cations + BAc15_d*cations +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(cations.int.all.REML15), growth$diam1)
+plot(residuals(cations.int.all.REML15), growth$cations)
+plot(residuals(cations.int.all.REML15), growth$BAh15_d)
+plot(residuals(cations.int.all.REML15), growth$BAc15_d)
+plot(cations.int.all.REML15)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.int.all.REML15, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 15m", "Con BA at 15m", "Het BA * cations", "Con BA * cations"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 15m scale: Interactive with con & het BA")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 20m scale
+
+```{r}
+growth$BAc20_d <- growth$BAc20 / (pi*(20^2))
+growth$BAh20_d <- growth$BAh20 / (pi*(20^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.add.het20 <- update(elev.null, .~. + BAh20_d)
+elev.add.all20 <- update(elev.add.het20, .~. + BAc20_d)
+elev.int.het20 <- update(elev.add.all20, .~. + BAh20_d*elev)
+elev.int.all20 <- update(elev.int.het20, .~. + BAc20_d*elev)
+```
+
+```{r, message = FALSE}
+comp.tab.elev20 <- anova(elev.null, elev.add.het20, elev.add.all20, elev.int.het20, elev.int.all20)
+comp.tab.elev20 <- comp.tab.elev20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.elev20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.add.all.REML20 <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(elev.add.all.REML20), growth$diam1)
+plot(residuals(elev.add.all.REML20), growth$elev)
+plot(residuals(elev.add.all.REML20), growth$BAh20_d)
+plot(residuals(elev.add.all.REML20), growth$BAc20_d)
+plot(elev.add.all.REML20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.add.all.REML20, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 20m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.add.het20 <- update(gap.null, .~. + BAh20_d)
+gap.add.all20 <- update(gap.add.het20, .~. + BAc20_d)
+gap.int.het20 <- update(gap.add.all20, .~. + BAh20_d*gap)
+gap.int.all20 <- update(gap.int.het20, .~. + BAc20_d*gap)
+```
+
+```{r, message = FALSE}
+comp.tab.gap20 <- anova(gap.null, gap.add.het20, gap.add.all20, gap.int.het20, gap.int.all20)
+comp.tab.gap20 <- comp.tab.gap20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.gap20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.add.all.REML20 <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(gap.add.all.REML20), growth$diam1)
+plot(residuals(gap.add.all.REML20), growth$gap)
+plot(residuals(gap.add.all.REML20), growth$BAh20_d)
+plot(residuals(gap.add.all.REML20), growth$BAc20_d)
+plot(gap.add.all.REML20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.add.all.REML20, pred.labels = c("(addercept)", "Diameter", "Gap", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 20m scale: additive model with all terms")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.add.het20 <- update(org.null, .~. + BAh20_d)
+org.add.all20 <- update(org.add.het20, .~. + BAc20_d)
+org.int.het20 <- update(org.add.all20, .~. + BAh20_d*org)
+org.int.all20 <- update(org.int.het20, .~. + BAc20_d*org)
+```
+
+```{r, message = FALSE}
+comp.tab.org20 <- anova(org.null, org.add.het20, org.add.all20, org.int.het20, org.int.all20)
+comp.tab.org20 <- comp.tab.org20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.org20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.int.het.REML20 <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh20_d*org + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(org.int.het.REML20), growth$diam1)
+plot(residuals(org.int.het.REML20), growth$org)
+plot(residuals(org.int.het.REML20), growth$BAh20_d)
+plot(residuals(org.int.het.REML20), growth$BAc20_d)
+plot(org.int.het.REML20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.int.het.REML20, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 20m", "Con BA at 20m", "Het BA * organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 20m scale: Interactive model with Het BA")
+```
+
+<br>
+<br>
+
+### CATIONS 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.add.het20 <- update(cations.null, .~. + BAh20_d)
+cations.add.all20 <- update(cations.add.het20, .~. + BAc20_d)
+cations.int.het20 <- update(cations.add.all20, .~. + BAh20_d*cations)
+cations.int.all20 <- update(cations.int.het20, .~. + BAc20_d*cations)
+```
+
+```{r, message = FALSE}
+comp.tab.cations20 <- anova(cations.null, cations.add.het20, cations.add.all20, cations.int.het20, cations.int.all20)
+comp.tab.cations20 <- comp.tab.cations20[, c("AIC", "Pr(>Chisq)")]
+kable(comp.tab.cations20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.add.all.REML20 <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(cations.add.all.REML20), growth$diam1)
+plot(residuals(cations.add.all.REML20), growth$cations)
+plot(residuals(cations.add.all.REML20), growth$BAh20_d)
+plot(residuals(cations.add.all.REML20), growth$BAc20_d)
+plot(cations.add.all.REML20)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.add.all.REML20, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 20m scale: Additive model with all terms")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+TESTING FOR SPATIAL AUTOCORRELATION
+
+```{r, message = FALSE}
+ge.vgm <- variogram(resid(elev.add.all.REML5)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.int.het.REML5)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.int.het.REML5)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.add.all.REML5)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, additive, 5m scale")
+plot(gg.vgm, main="Gap measure, interactive with het BA, 5m scale")
+plot(go.vgm, main="Soil organic matter, \ninteractive with het BA, 5m scale")
+plot(gf.vgm, main="Cations, \nadditive, 5m scale")
+
+
+ge.vgm <- variogram(resid(elev.add.all.REML10)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.int.all.REML10)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.add.all.REML10)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.add.all.REML10)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, additive, 10m scale")
+plot(gg.vgm, main="Gap measure, interactive with con & het BA, 10m scale")
+plot(go.vgm, main="Soil organic matter, \nadditive, 10m scale")
+plot(gf.vgm, main="Cations, \nadditive, 10m scale")
+
+
+ge.vgm <- variogram(resid(elev.add.all.REML15)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.add.all.REML15)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.int.het.REML15)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.int.all.REML15)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, additive, 15m scale")
+plot(gg.vgm, main="Gap measure, additive, 15m scale")
+plot(go.vgm, main="Soil organic matter, \ninteractive with het BA, 15m scale")
+plot(gf.vgm, main="Cations, \ninteractive with con & het BA, 15m scale")
+
+
+ge.vgm <- variogram(resid(elev.add.all.REML20)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.add.all.REML20)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.int.het.REML20)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.add.all.REML20)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, additive, 20m scale")
+plot(gg.vgm, main="Gap measure, additive, 20m scale")
+plot(go.vgm, main="Soil organic matter, \ninteractive with het BA, 20m scale")
+plot(gf.vgm, main="Cations, \nadditive, 20m scale")
+
+```
+
