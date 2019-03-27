@@ -1,0 +1,738 @@
+---
+title: "Brown et al. Growth models"
+author: "Alissa Brown"
+date: "February 28, 2019"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include = FALSE}
+x <- c("lme4", "lmerTest", "dplyr", "sjPlot", "gstat", "knitr")
+lapply(x, require, character.only = TRUE)
+
+# Data setup
+growth <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
+growth <- growth[!is.na(growth$growth),]  # only return rows for saplings that have a growth rate
+growth <- growth[growth$growth<=1,]   # remove probable measurement errors
+growth$growth <- ifelse(growth$growth<0, 0, growth$growth)   # convert negative growth rates to "0"
+
+growth$BAtot5 <- growth$BAc5 + growth$BAh5
+growth$BAtot5_d <- growth$BAtot5 / (pi*(5^2))
+growth$BAc5_d <- growth$BAc5 / (pi*(5^2))
+growth$BAh5_d <- growth$BAh5 / (pi*(5^2))
+colnames(growth)[colnames(growth) == "alt"] <- "elev"
+```
+
+Starting with 5m spatial scale: Run growth models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
+
+### ELEVATION at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+elev.null <- lmer(log(growth+1) ~ diam1 + elev +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+elev.tot.add5 <- update(elev.null, .~. + BAtot5_d)
+elev.sep.add5 <- update(elev.null, .~. + BAh5_d + BAc5_d)
+elev.tot.int5 <- update(elev.null, .~. + elev*BAtot5_d)
+elev.sep.int5 <- update(elev.null, .~. + elev*BAh5_d + elev*BAc5_d)
+```
+
+```{r, message = FALSE}
+comp.tab.elev5 <- AIC(elev.null, elev.tot.add5, elev.sep.add5, elev.tot.int5, elev.sep.int5)
+comp.tab.elev5$delta_AIC <- comp.tab.elev5$AIC - min(comp.tab.elev5$AIC)
+comp.tab.elev5 <- cbind(comp.tab.elev5, 
+                        BIC(elev.null, elev.tot.add5, elev.sep.add5, elev.tot.int5, elev.sep.int5)[2])
+comp.tab.elev5$delta_BIC <- comp.tab.elev5$BIC - min(comp.tab.elev5$BIC)
+kable(comp.tab.elev5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.sep.add5.REML <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh5_d + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(elev.sep.add5.REML), growth$diam1)
+plot(residuals(elev.sep.add5.REML), growth$elev)
+plot(residuals(elev.sep.add5.REML), growth$BAh5_d)
+plot(residuals(elev.sep.add5.REML), growth$BAc5_d)
+plot(elev.sep.add5.REML)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.sep.add5.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 5m scale")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.null <- lmer(log(growth+1) ~ diam1 + gap +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+gap.tot.add5 <- update(gap.null, .~. + BAtot5_d)
+gap.sep.add5 <- update(gap.null, .~. + BAh5_d + BAc5_d)
+gap.tot.int5 <- update(gap.null, .~. + gap*BAtot5_d)
+gap.sep.int5 <- update(gap.null, .~. + gap*BAh5_d + gap*BAc5_d)
+```
+
+```{r, message = FALSE}
+comp.tab.gap5 <- AIC(gap.null, gap.tot.add5, gap.sep.add5, gap.tot.int5, gap.sep.int5)
+comp.tab.gap5$delta_AIC <- comp.tab.gap5$AIC - min(comp.tab.gap5$AIC)
+comp.tab.gap5 <- cbind(comp.tab.gap5, 
+                        BIC(gap.null, gap.tot.add5, gap.sep.add5, gap.tot.int5, gap.sep.int5)[2])
+comp.tab.gap5$delta_BIC <- comp.tab.gap5$BIC - min(comp.tab.gap5$BIC)
+kable(comp.tab.gap5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.sep.int5.REML <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh5_d*gap + BAc5_d*gap +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(gap.sep.int5.REML), growth$diam1)
+plot(residuals(gap.sep.int5.REML), growth$gap)
+plot(residuals(gap.sep.int5.REML), growth$BAh5_d)
+plot(residuals(gap.sep.int5.REML), growth$BAc5_d)
+plot(gap.sep.int5.REML)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.sep.int5.REML, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 5m", "Con BA at 5m", "Het BA * Gap", "Con BA * Gap"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 5m scale")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.null <- lmer(log(growth+1) ~ diam1 + org +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+org.tot.add5 <- update(org.null, .~. + BAtot5_d)
+org.sep.add5 <- update(org.null, .~. + BAh5_d + BAc5_d)
+org.tot.int5 <- update(org.null, .~. + org*BAtot5_d)
+org.sep.int5 <- update(org.null, .~. + org*BAh5_d + org*BAc5_d)
+```
+
+```{r, message = FALSE}
+comp.tab.org5 <- AIC(org.null, org.tot.add5, org.sep.add5, org.tot.int5, org.sep.int5)
+comp.tab.org5$delta_AIC <- comp.tab.org5$AIC - min(comp.tab.org5$AIC)
+comp.tab.org5 <- cbind(comp.tab.org5, 
+                        BIC(org.null, org.tot.add5, org.sep.add5, org.tot.int5, org.sep.int5)[2])
+comp.tab.org5$delta_BIC <- comp.tab.org5$BIC - min(comp.tab.org5$BIC)
+kable(comp.tab.org5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.sep.int5.REML <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh5_d*org + BAc5_d*org +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(org.sep.int5.REML), growth$diam1)
+plot(residuals(org.sep.int5.REML), growth$org)
+plot(residuals(org.sep.int5.REML), growth$BAh5_d)
+plot(residuals(org.sep.int5.REML), growth$BAc5_d)
+plot(org.sep.int5.REML)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.sep.int5.REML, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 5m", "Con BA at 5m", "Het BA * Organic", "Con BA * Organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 5m scale")
+```
+
+<br>
+<br>
+
+### SOIL CATIONS 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.null <- lmer(log(growth+1) ~ diam1 + cations +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+cations.tot.add5 <- update(cations.null, .~. + BAtot5_d)
+cations.sep.add5 <- update(cations.null, .~. + BAh5_d + BAc5_d)
+cations.tot.int5 <- update(cations.null, .~. + cations*BAtot5_d)
+cations.sep.int5 <- update(cations.null, .~. + cations*BAh5_d + cations*BAc5_d)
+```
+
+```{r, message = FALSE}
+comp.tab.cations5 <- AIC(cations.null, cations.tot.add5, cations.sep.add5, cations.tot.int5, cations.sep.int5)
+comp.tab.cations5$delta_AIC <- comp.tab.cations5$AIC - min(comp.tab.cations5$AIC)
+comp.tab.cations5 <- cbind(comp.tab.cations5, 
+                        BIC(cations.null, cations.tot.add5, cations.sep.add5, cations.tot.int5, cations.sep.int5)[2])
+comp.tab.cations5$delta_BIC <- comp.tab.cations5$BIC - min(comp.tab.cations5$BIC)
+kable(comp.tab.cations5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.sep.add5.REML <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh5_d + BAc5_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, include = FALSE}
+# Check model - plot residuals against covariates
+plot(residuals(cations.sep.add5.REML), growth$diam1)
+plot(residuals(cations.sep.add5.REML), growth$cations)
+plot(residuals(cations.sep.add5.REML), growth$BAh5_d)
+plot(residuals(cations.sep.add5.REML), growth$BAc5_d)
+plot(cations.sep.add5.REML)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.sep.add5.REML, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 5m scale")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 10m scale
+
+```{r}
+growth$BAtot10 <- growth$BAc10 + growth$BAh10
+growth$BAtot10_d <- growth$BAtot10 / (pi*(10^2))
+growth$BAc10_d <- growth$BAc10 / (pi*(10^2))
+growth$BAh10_d <- growth$BAh10 / (pi*(10^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.tot.add10 <- update(elev.null, .~. + BAtot10_d)
+elev.sep.add10 <- update(elev.null, .~. + BAh10_d + BAc10_d)
+elev.tot.int10 <- update(elev.null, .~. + elev*BAtot10_d)
+elev.sep.int10 <- update(elev.null, .~. + elev*BAh10_d + elev*BAc10_d)
+```
+
+```{r, message = FALSE}
+comp.tab.elev10 <- AIC(elev.null, elev.tot.add10, elev.sep.add10, elev.tot.int10, elev.sep.int10)
+comp.tab.elev10$delta_AIC <- comp.tab.elev10$AIC - min(comp.tab.elev10$AIC)
+comp.tab.elev10 <- cbind(comp.tab.elev10, 
+                        BIC(elev.null, elev.tot.add10, elev.sep.add10, elev.tot.int10, elev.sep.int10)[2])
+comp.tab.elev10$delta_BIC <- comp.tab.elev10$BIC - min(comp.tab.elev10$BIC)
+kable(comp.tab.elev10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 10m scale")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.tot.add10 <- update(gap.null, .~. + BAtot10_d)
+gap.sep.add10 <- update(gap.null, .~. + BAh10_d + BAc10_d)
+gap.tot.int10 <- update(gap.null, .~. + gap*BAtot10_d)
+gap.sep.int10 <- update(gap.null, .~. + gap*BAh10_d + gap*BAc10_d)
+```
+
+```{r, message = FALSE}
+comp.tab.gap10 <- AIC(gap.null, gap.tot.add10, gap.sep.add10, gap.tot.int10, gap.sep.int10)
+comp.tab.gap10$delta_AIC <- comp.tab.gap10$AIC - min(comp.tab.gap10$AIC)
+comp.tab.gap10 <- cbind(comp.tab.gap10, 
+                        BIC(gap.null, gap.tot.add10, gap.sep.add10, gap.tot.int10, gap.sep.int10)[2])
+comp.tab.gap10$delta_BIC <- comp.tab.gap10$BIC - min(comp.tab.gap10$BIC)
+kable(comp.tab.gap10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.sep.int10.REML <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh10_d*gap + BAc10_d*gap +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.sep.int10.REML, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 10m", "Con BA at 10m", "Het BA * Gap", "Con BA * Gap"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 10m scale")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.tot.add10 <- update(org.null, .~. + BAtot10_d)
+org.sep.add10 <- update(org.null, .~. + BAh10_d + BAc10_d)
+org.tot.int10 <- update(org.null, .~. + org*BAtot10_d)
+org.sep.int10 <- update(org.null, .~. + org*BAh10_d + org*BAc10_d)
+```
+
+```{r, message = FALSE}
+comp.tab.org10 <- AIC(org.null, org.tot.add10, org.sep.add10, org.tot.int10, org.sep.int10)
+comp.tab.org10$delta_AIC <- comp.tab.org10$AIC - min(comp.tab.org10$AIC)
+comp.tab.org10 <- cbind(comp.tab.org10, 
+                        BIC(org.null, org.tot.add10, org.sep.add10, org.tot.int10, org.sep.int10)[2])
+comp.tab.org10$delta_BIC <- comp.tab.org10$BIC - min(comp.tab.org10$BIC)
+kable(comp.tab.org10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 10m scale")
+```
+
+<br>
+<br>
+
+### CATIONS 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.tot.add10 <- update(cations.null, .~. + BAtot10_d)
+cations.sep.add10 <- update(cations.null, .~. + BAh10_d + BAc10_d)
+cations.tot.int10 <- update(cations.null, .~. + cations*BAtot10_d)
+cations.sep.int10 <- update(cations.null, .~. + cations*BAh10_d + cations*BAc10_d)
+```
+
+```{r, message = FALSE}
+comp.tab.cations10 <- AIC(cations.null, cations.tot.add10, cations.sep.add10, cations.tot.int10, cations.sep.int10)
+comp.tab.cations10$delta_AIC <- comp.tab.cations10$AIC - min(comp.tab.cations10$AIC)
+comp.tab.cations10 <- cbind(comp.tab.cations10, 
+                        BIC(cations.null, cations.tot.add10, cations.sep.add10, cations.tot.int10, cations.sep.int10)[2])
+comp.tab.cations10$delta_BIC <- comp.tab.cations10$BIC - min(comp.tab.cations10$BIC)
+kable(comp.tab.cations10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh10_d + BAc10_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 10m scale")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 15m scale
+
+```{r}
+growth$BAtot15 <- growth$BAc15 + growth$BAh15
+growth$BAtot15_d <- growth$BAtot15 / (pi*(15^2))
+growth$BAc15_d <- growth$BAc15 / (pi*(15^2))
+growth$BAh15_d <- growth$BAh15 / (pi*(15^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.tot.add15 <- update(elev.null, .~. + BAtot15_d)
+elev.sep.add15 <- update(elev.null, .~. + BAh15_d + BAc15_d)
+elev.tot.int15 <- update(elev.null, .~. + elev*BAtot15_d)
+elev.sep.int15 <- update(elev.null, .~. + elev*BAh15_d + elev*BAc15_d)
+```
+
+```{r, message = FALSE}
+comp.tab.elev15 <- AIC(elev.null, elev.tot.add15, elev.sep.add15, elev.tot.int15, elev.sep.int15)
+comp.tab.elev15$delta_AIC <- comp.tab.elev15$AIC - min(comp.tab.elev15$AIC)
+comp.tab.elev15 <- cbind(comp.tab.elev15, 
+                        BIC(elev.null, elev.tot.add15, elev.sep.add15, elev.tot.int15, elev.sep.int15)[2])
+comp.tab.elev15$delta_BIC <- comp.tab.elev15$BIC - min(comp.tab.elev15$BIC)
+kable(comp.tab.elev15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.sep.add15.REML <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh15_d + BAc15_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.sep.add15.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 15m scale")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.tot.add15 <- update(gap.null, .~. + BAtot15_d)
+gap.sep.add15 <- update(gap.null, .~. + BAh15_d + BAc15_d)
+gap.tot.int15 <- update(gap.null, .~. + gap*BAtot15_d)
+gap.sep.int15 <- update(gap.null, .~. + gap*BAh15_d + gap*BAc15_d)
+```
+
+```{r, message = FALSE}
+comp.tab.gap15 <- AIC(gap.null, gap.tot.add15, gap.sep.add15, gap.tot.int15, gap.sep.int15)
+comp.tab.gap15$delta_AIC <- comp.tab.gap15$AIC - min(comp.tab.gap15$AIC)
+comp.tab.gap15 <- cbind(comp.tab.gap15, 
+                        BIC(gap.null, gap.tot.add15, gap.sep.add15, gap.tot.int15, gap.sep.int15)[2])
+comp.tab.gap15$delta_BIC <- comp.tab.gap15$BIC - min(comp.tab.gap15$BIC)
+kable(comp.tab.gap15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.sep.add15.REML <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh15_d + BAc15_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.sep.add15.REML, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 15m scale")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.tot.add15 <- update(org.null, .~. + BAtot15_d)
+org.sep.add15 <- update(org.null, .~. + BAh15_d + BAc15_d)
+org.tot.int15 <- update(org.null, .~. + org*BAtot15_d)
+org.sep.int15 <- update(org.null, .~. + org*BAh15_d + org*BAc15_d)
+```
+
+```{r, message = FALSE}
+comp.tab.org15 <- AIC(org.null, org.tot.add15, org.sep.add15, org.tot.int15, org.sep.int15)
+comp.tab.org15$delta_AIC <- comp.tab.org15$AIC - min(comp.tab.org15$AIC)
+comp.tab.org15 <- cbind(comp.tab.org15, 
+                        BIC(org.null, org.tot.add15, org.sep.add15, org.tot.int15, org.sep.int15)[2])
+comp.tab.org15$delta_BIC <- comp.tab.org15$BIC - min(comp.tab.org15$BIC)
+kable(comp.tab.org15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.sep.int15.REML <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh15_d*org + BAc15_d*org +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.sep.int15.REML, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 15m", "Con BA at 15m", "Het BA * Organic", "Con BA * Organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 15m scale")
+```
+
+<br>
+<br>
+
+### CATIONS 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.tot.add15 <- update(cations.null, .~. + BAtot15_d)
+cations.sep.add15 <- update(cations.null, .~. + BAh15_d + BAc15_d)
+cations.tot.int15 <- update(cations.null, .~. + cations*BAtot15_d)
+cations.sep.int15 <- update(cations.null, .~. + cations*BAh15_d + cations*BAc15_d)
+```
+
+```{r, message = FALSE}
+comp.tab.cations15 <- AIC(cations.null, cations.tot.add15, cations.sep.add15, cations.tot.int15, cations.sep.int15)
+comp.tab.cations15$delta_AIC <- comp.tab.cations15$AIC - min(comp.tab.cations15$AIC)
+comp.tab.cations15 <- cbind(comp.tab.cations15, 
+                        BIC(cations.null, cations.tot.add15, cations.sep.add15, cations.tot.int15, cations.sep.int15)[2])
+comp.tab.cations15$delta_BIC <- comp.tab.cations15$BIC - min(comp.tab.cations15$BIC)
+kable(comp.tab.cations15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.sep.int15.REML <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh15_d*cations + BAc15_d*cations +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.sep.int15.REML, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 15m", "Con BA at 15m", "Het BA * Cations", "Con BA * Cations"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 15m scale")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+### ELEVATION at 20m scale
+
+```{r}
+growth$BAtot20 <- growth$BAc20 + growth$BAh20
+growth$BAtot20_d <- growth$BAtot20 / (pi*(20^2))
+growth$BAc20_d <- growth$BAc20 / (pi*(20^2))
+growth$BAh20_d <- growth$BAh20 / (pi*(20^2))
+```
+
+```{r, include = FALSE}
+# run all competing models
+elev.tot.add20 <- update(elev.null, .~. + BAtot20_d)
+elev.sep.add20 <- update(elev.null, .~. + BAh20_d + BAc20_d)
+elev.tot.int20 <- update(elev.null, .~. + elev*BAtot20_d)
+elev.sep.int20 <- update(elev.null, .~. + elev*BAh20_d + elev*BAc20_d)
+```
+
+```{r, message = FALSE}
+comp.tab.elev20 <- AIC(elev.null, elev.tot.add20, elev.sep.add20, elev.tot.int20, elev.sep.int20)
+comp.tab.elev20$delta_AIC <- comp.tab.elev20$AIC - min(comp.tab.elev20$AIC)
+comp.tab.elev20 <- cbind(comp.tab.elev20, 
+                        BIC(elev.null, elev.tot.add20, elev.sep.add20, elev.tot.int20, elev.sep.int20)[2])
+comp.tab.elev20$delta_BIC <- comp.tab.elev20$BIC - min(comp.tab.elev20$BIC)
+kable(comp.tab.elev20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+elev.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + elev +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(elev.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 20m scale")
+```
+
+<br>
+<br>
+
+### GAP MEASURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+gap.tot.add20 <- update(gap.null, .~. + BAtot20_d)
+gap.sep.add20 <- update(gap.null, .~. + BAh20_d + BAc20_d)
+gap.tot.int20 <- update(gap.null, .~. + gap*BAtot20_d)
+gap.sep.int20 <- update(gap.null, .~. + gap*BAh20_d + gap*BAc20_d)
+```
+
+```{r, message = FALSE}
+comp.tab.gap20 <- AIC(gap.null, gap.tot.add20, gap.sep.add20, gap.tot.int20, gap.sep.int20)
+comp.tab.gap20$delta_AIC <- comp.tab.gap20$AIC - min(comp.tab.gap20$AIC)
+comp.tab.gap20 <- cbind(comp.tab.gap20, 
+                        BIC(gap.null, gap.tot.add20, gap.sep.add20, gap.tot.int20, gap.sep.int20)[2])
+comp.tab.gap20$delta_BIC <- comp.tab.gap20$BIC - min(comp.tab.gap20$BIC)
+kable(comp.tab.gap20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+gap.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + gap +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(gap.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 20m scale")
+```
+
+<br>
+<br>
+
+### SOIL ORGANIC MATTER at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+org.tot.add20 <- update(org.null, .~. + BAtot20_d)
+org.sep.add20 <- update(org.null, .~. + BAh20_d + BAc20_d)
+org.tot.int20 <- update(org.null, .~. + org*BAtot20_d)
+org.sep.int20 <- update(org.null, .~. + org*BAh20_d + org*BAc20_d)
+```
+
+```{r, message = FALSE}
+comp.tab.org20 <- AIC(org.null, org.tot.add20, org.sep.add20, org.tot.int20, org.sep.int20)
+comp.tab.org20$delta_AIC <- comp.tab.org20$AIC - min(comp.tab.org20$AIC)
+comp.tab.org20 <- cbind(comp.tab.org20, 
+                        BIC(org.null, org.tot.add20, org.sep.add20, org.tot.int20, org.sep.int20)[2])
+comp.tab.org20$delta_BIC <- comp.tab.org20$BIC - min(comp.tab.org20$BIC)
+kable(comp.tab.org20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+org.sep.int20.REML <- lmer(log(growth+1) ~ diam1 + org +
+                          BAh20_d*org + BAc20_d*org +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(org.sep.int20.REML, pred.labels = c("(Intercept)", "Diameter", "Organic", "Het BA at 20m", "Con BA at 20m", "Het BA * Organic", "Con BA * Organic"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Soil organic matter at 20m scale")
+```
+
+<br>
+<br>
+
+### CATIONS 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+cations.tot.add20 <- update(cations.null, .~. + BAtot20_d)
+cations.sep.add20 <- update(cations.null, .~. + BAh20_d + BAc20_d)
+cations.tot.int20 <- update(cations.null, .~. + cations*BAtot20_d)
+cations.sep.int20 <- update(cations.null, .~. + cations*BAh20_d + cations*BAc20_d)
+```
+
+```{r, message = FALSE}
+comp.tab.cations20 <- AIC(cations.null, cations.tot.add20, cations.sep.add20, cations.tot.int20, cations.sep.int20)
+comp.tab.cations20$delta_AIC <- comp.tab.cations20$AIC - min(comp.tab.cations20$AIC)
+comp.tab.cations20 <- cbind(comp.tab.cations20, 
+                        BIC(cations.null, cations.tot.add20, cations.sep.add20, cations.tot.int20, cations.sep.int20)[2])
+comp.tab.cations20$delta_BIC <- comp.tab.cations20$BIC - min(comp.tab.cations20$BIC)
+kable(comp.tab.cations20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+cations.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + cations +
+                          BAh20_d + BAc20_d +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(cations.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Cations", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Cations at 20m scale")
+```
+
+<br>
+<br>
+<br>
+<br>
+
+TESTING FOR SPATIAL AUTOCORRELATION
+
+```{r, message = FALSE}
+ge.vgm <- variogram(resid(elev.sep.add5.REML)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.sep.int5.REML)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.sep.int5.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, 5m scale")
+plot(gg.vgm, main="Gap measure, 5m scale")
+plot(go.vgm, main="Soil organic matter, 5m scale")
+plot(gf.vgm, main="Cations, 5m scale")
+
+
+ge.vgm <- variogram(resid(elev.sep.add10.REML)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.sep.int10.REML)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.sep.add10.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, 10m scale")
+plot(gg.vgm, main="Gap measure, 10m scale")
+plot(go.vgm, main="Soil organic matter, 10m scale")
+plot(gf.vgm, main="Cations, 10m scale")
+
+
+ge.vgm <- variogram(resid(elev.sep.add15.REML)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.sep.add15.REML)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.sep.int15.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.int15.REML)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, 15m scale")
+plot(gg.vgm, main="Gap measure, 15m scale")
+plot(go.vgm, main="Soil organic matter, 15m scale")
+plot(gf.vgm, main="Cations, 15m scale")
+
+
+ge.vgm <- variogram(resid(elev.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+gg.vgm <- variogram(resid(gap.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+go.vgm <- variogram(resid(org.sep.int20.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+
+plot(ge.vgm, main="Elevation, 20m scale")
+plot(gg.vgm, main="Gap measure, 20m scale")
+plot(go.vgm, main="Soil organic matter, 20m scale")
+plot(gf.vgm, main="Cations, 20m scale")
+
+```
+
