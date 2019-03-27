@@ -18,15 +18,16 @@ lapply(x, require, character.only = TRUE)
 
 # Data setup
 growth <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
+colnames(growth)[colnames(growth) == "alt"] <- "elev"
+
 growth <- growth[!is.na(growth$growth),]  # only return rows for saplings that have a growth rate
 growth <- growth[growth$growth<=1,]   # remove probable measurement errors
 growth$growth <- ifelse(growth$growth<0, 0, growth$growth)   # convert negative growth rates to "0"
 
 growth$BAtot5 <- growth$BAc5 + growth$BAh5
-growth$BAtot5_d <- growth$BAtot5 / (pi*(5^2))
+growth$BAtot5_d <- growth$BAtot5 / (pi*(5^2))    # calculate densities
 growth$BAc5_d <- growth$BAc5 / (pi*(5^2))
 growth$BAh5_d <- growth$BAh5 / (pi*(5^2))
-colnames(growth)[colnames(growth) == "alt"] <- "elev"
 ```
 
 Starting with 5m spatial scale: Run growth models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
