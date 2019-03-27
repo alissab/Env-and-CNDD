@@ -81,9 +81,9 @@ f <- as.data.frame(ef)
 
 het_cat_plot <- ggplot(f, aes(x=BAh15_d, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.55, 0.2)) +
-  scale_x_continuous(name="", limits=c(0, 40)) +
+  # scale_x_continuous(name="", limits=c(0, 40)) +
   coord_cartesian(ylim=c(-0.55, 0.2)) +
-  coord_cartesian(xlim=c(0, 40)) +
+  # coord_cartesian(xlim=c(0, 40)) +
   
   geom_ribbon(data=f[f$cations==-0.08, ], inherit.aes=FALSE,
               aes(ymin=lower, ymax=upper, x=BAh15_d),
@@ -102,6 +102,9 @@ het_cat_plot <- ggplot(f, aes(x=BAh15_d, y=fit)) +
     axis.text=element_text(size=20),
     axis.title=element_text(size=20),
     plot.margin=margin(t=1, r=15, b=1, l=1))
+
+grid.arrange(con_cat_plot, het_cat_plot, ncol=2, nrow=1)
+
 
 
 
