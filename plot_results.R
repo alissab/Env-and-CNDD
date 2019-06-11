@@ -5,75 +5,76 @@ require(gridExtra)
 
 
 # BAc vs. BAh using elevation at 5m
-ef <- effect("BAc5_d", elev.sep.add5.REML)
+ef <- effect("BAc15", cations.sep.int15.REML)
 x <- as.data.frame(ef)
 
-ef <- effect("BAh5_d", elev.sep.add5.REML)
+ef <- effect("BAh15", cations.sep.int15.REML)
 y <- as.data.frame(ef)
 
-xplot <- ggplot(x, aes(x=BAc5_d, y=fit)) + 
+png("BAc15_x_cations.png", width = 3, height = 2, units = "in", res = 300)
+ggplot(x, aes(x=BAc15, y=fit)) + 
   scale_y_continuous(name="",
-                     limits=c(-0.01, 0.13)) +
-  scale_x_continuous(name="", limits=c(0, 30)) +
-  coord_cartesian(ylim=c(-0.01, 0.13)) +
-  coord_cartesian(xlim=c(0, 30)) +
+                     limits=c(-0.16, 0.13)) +
+  scale_x_continuous(name="", limits=c(-0.5, 20)) +
+  coord_cartesian(ylim=c(-0.16, 0.13)) +
+  coord_cartesian(xlim=c(-0.5, 20)) +
   
   geom_ribbon(data=x, inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
-              alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
+              aes(ymin=lower, ymax=upper, x=BAc15),
+              alpha=0.2, linetype=3, size=0.75, color="gray60", fill="gray70") +
   geom_smooth(data=x, inherit.aes=FALSE,
-              aes(x=BAc5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc15, y=fit), size=1, color="gray60", method="lm") +
   theme_classic() + 
   theme(
-    axis.text=element_text(size=20),
+    axis.text=element_text(size=10),
     plot.margin=margin(t=1, r=15, b=1, l=1))
+dev.off()
 
-
-yplot <- ggplot(y, aes(x=BAh5_d, y=fit)) + 
+png("BAh15_x_cations.png", width = 3, height = 2, units = "in", res = 300)
+ggplot(y, aes(x=BAh15, y=fit)) + 
   scale_y_continuous(name="",
-                     limits=c(-0.01, 0.13)) +
-  scale_x_continuous(name="", limits=c(0, 100)) +
-  coord_cartesian(ylim=c(-0.01, 0.13)) +
-  coord_cartesian(xlim=c(0, 100)) +
+                     limits=c(-0.16, 0.13)) +
+  scale_x_continuous(name="", limits=c(-4, 3)) +
+  coord_cartesian(ylim=c(-0.16, 0.13)) +
+  coord_cartesian(xlim=c(-4, 3)) +
   
   geom_ribbon(data=y, inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
-              alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
+              aes(ymin=lower, ymax=upper, x=BAh15),
+              alpha=0.2, linetype=5, size=0.75, color="gray10", fill="gray70") +
   geom_smooth(data=y, inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh15, y=fit), size=1, color="gray10", method="lm") +
   theme_classic() + 
   theme(
-    axis.text=element_text(size=20),
+    axis.text=element_text(size=10),
     plot.margin=margin(t=1, r=15, b=1, l=1))
-
-grid.arrange(xplot, yplot, ncol=2, nrow=1)
+dev.off()
 
 
 
 # org
-ef <- effect("org:BAc5_d", org.sep.int5.REML)
+ef <- effect("org:BAc5", org.sep.int5.REML)
 o <- as.data.frame(ef)
 
-ef <- effect("org:BAh5_d", org.sep.int5.REML)
+ef <- effect("org:BAh5", org.sep.int5.REML)
 oh <- as.data.frame(ef)
 
-oplot <- ggplot(o, aes(x=BAc5_d, y=fit)) +
+oplot <- ggplot(o, aes(x=BAc5, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.09, 0.16)) +
   scale_x_continuous(name="", limits=c(0, 30)) +
   coord_cartesian(ylim=c(-0.09, 0.16)) +
   coord_cartesian(xlim=c(0, 30)) +
   
   geom_ribbon(data=o[o$org==7.5, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
+              aes(ymin=lower, ymax=upper, x=BAc5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=o[o$org==7.5, ], inherit.aes=FALSE,
-              aes(x=BAc5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc5, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
+              aes(ymin=lower, ymax=upper, x=BAc5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(x=BAc5_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAc5, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -83,23 +84,23 @@ oplot <- ggplot(o, aes(x=BAc5_d, y=fit)) +
         # axis.line.x=element_blank(),
         plot.margin = unit(c(5,5,5,5), "mm"))
 
-ohplot <- ggplot(oh, aes(x=BAh5_d, y=fit)) +
+ohplot <- ggplot(oh, aes(x=BAh5, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.09, 0.16)) +
   scale_x_continuous(name="", breaks=seq(0, 100, 20)) +
   coord_cartesian(ylim=c(-0.09, 0.16)) +
   coord_cartesian(xlim=c(0, 100)) +
   
   geom_ribbon(data=oh[oh$org==7.5, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=oh[oh$org==7.5, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh5, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=oh[oh$org==9, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=oh[oh$org==9, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh5, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -114,18 +115,18 @@ grid.arrange(oplot, ohplot, ncol=2, nrow=1)
 
 
 #  comparing con vs. het effect when ORG levels are HIGH
-oplot <- ggplot(o, aes(x=BAc5_d, y=fit)) +
+oplot <- ggplot(o, aes(x=BAc5, y=fit)) +
   scale_y_continuous(name="", limits=c(0, 0.16)) +
   scale_x_continuous(name="", breaks=seq(0, 10, 2)) +
   coord_cartesian(ylim=c(0, 0.16)) +
   coord_cartesian(xlim=c(0, 10)) +
   
   geom_ribbon(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
+              aes(ymin=lower, ymax=upper, x=BAc5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   
   geom_smooth(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(x=BAc5_d, y=fit), size=1, color="gray10", method="lm") +
+              aes(x=BAc5, y=fit), size=1, color="gray10", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -135,18 +136,18 @@ oplot <- ggplot(o, aes(x=BAc5_d, y=fit)) +
         # axis.line.x=element_blank(),
         plot.margin = unit(c(5,5,5,5), "mm"))
 
-ohplot <- ggplot(oh, aes(x=BAh5_d, y=fit)) +
+ohplot <- ggplot(oh, aes(x=BAh5, y=fit)) +
   scale_y_continuous(name="", limits=c(0, 0.16)) +
   scale_x_continuous(name="", breaks=seq(0, 100, 20)) +
   coord_cartesian(ylim=c(0, 0.16)) +
   coord_cartesian(xlim=c(0, 100)) +
   
   geom_ribbon(data=oh[oh$org==9, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   
   geom_smooth(data=oh[oh$org==9, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh5, y=fit), size=1.5, color="gray60", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -164,30 +165,30 @@ grid.arrange(oplot, ohplot, ncol=2, nrow=1)
 
 # BAc * gap x growth (10m scale)
 # compared to BAh * gap x growth
-ef <- effect("gap:BAc10_d", gap.sep.int10.REML)
+ef <- effect("gap:BAc10", gap.sep.int10.REML)
 b <- as.data.frame(ef)
 
-ef <- effect("gap:BAh10_d", gap.sep.int10.REML)
+ef <- effect("gap:BAh10", gap.sep.int10.REML)
 h <- as.data.frame(ef)
 
 
-conplot <- ggplot(b, aes(x=BAc10_d, y=fit)) +
+conplot <- ggplot(b, aes(x=BAc10, y=fit)) +
   scale_y_continuous(name="", limits = c(-0.07, 0.25)) +
   scale_x_continuous(name="") +
   coord_cartesian(ylim=c(-0.07, 0.25)) +
   coord_cartesian(xlim=c(0, 10)) +
   
   geom_ribbon(data=b[b$gap==10, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc10_d),
+              aes(ymin=lower, ymax=upper, x=BAc10),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=b[b$gap==10, ], inherit.aes=FALSE,
-              aes(x=BAc10_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc10, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=b[b$gap==70, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc10_d),
+              aes(ymin=lower, ymax=upper, x=BAc10),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=b[b$gap==70, ], inherit.aes=FALSE,
-              aes(x=BAc10_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAc10, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -196,24 +197,24 @@ conplot <- ggplot(b, aes(x=BAc10_d, y=fit)) +
     plot.margin=margin(t=1, r=15, b=1, l=1))
 
 
-hetplot <- ggplot(h, aes(x=BAh10_d, y=fit)) +
+hetplot <- ggplot(h, aes(x=BAh10, y=fit)) +
   scale_y_continuous(name="", limits = c(-0.07, 0.25)) +
   scale_x_continuous(name="") +
   coord_cartesian(ylim=c(-0.07, 0.25)) +
   coord_cartesian(xlim=c(0, 70)) +
   
   geom_ribbon(data=h[h$gap==10, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh10_d),
+              aes(ymin=lower, ymax=upper, x=BAh10),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=h[h$gap==10, ], inherit.aes=FALSE,
-              aes(x=BAh10_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh10, y=fit), size=1.5, color="gray60", method="lm") +
   
   
   geom_ribbon(data=h[h$gap==70, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh10_d),
+              aes(ymin=lower, ymax=upper, x=BAh10),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=h[h$gap==70, ], inherit.aes=FALSE,
-              aes(x=BAh10_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh10, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -228,30 +229,30 @@ grid.arrange(conplot, hetplot, ncol=2, nrow=1)
 
 # BAc * CATIONS x growth (15m scale)
 # as compared to BAh * cations x growth
-ef <- effect("cations:BAc15_d", cations.sep.int15.REML)
+ef <- effect("cations:BAc15", cations.sep.int15.REML)
 a <- as.data.frame(ef)
 
-ef <- effect("cations:BAh15_d", cations.sep.int15.REML)
+ef <- effect("cations:BAh15", cations.sep.int15.REML)
 f <- as.data.frame(ef)
 
 
-con_cat_plot <- ggplot(a, aes(x=BAc15_d, y=fit)) +
+con_cat_plot <- ggplot(a, aes(x=BAc15, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.25, 0.2)) +
   scale_x_continuous(name="", limits=c(0, 20)) +
   coord_cartesian(ylim=c(-0.25, 0.2)) +
   coord_cartesian(xlim=c(0, 20)) +
   
   geom_ribbon(data=a[a$cations==-0.08, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc15_d),
+              aes(ymin=lower, ymax=upper, x=BAc15),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=a[a$cations==-0.08, ], inherit.aes=FALSE,
-              aes(x=BAc15_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc15, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=a[a$cations==0.06, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc15_d),
+              aes(ymin=lower, ymax=upper, x=BAc15),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=a[a$cations==0.06, ], inherit.aes=FALSE,
-              aes(x=BAc15_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAc15, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -260,23 +261,23 @@ con_cat_plot <- ggplot(a, aes(x=BAc15_d, y=fit)) +
     plot.margin=margin(t=1, r=15, b=1, l=1))
 
 
-het_cat_plot <- ggplot(f, aes(x=BAh15_d, y=fit)) +
+het_cat_plot <- ggplot(f, aes(x=BAh15, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.25, 0.2)) +
   scale_x_continuous(name="") +
   coord_cartesian(ylim=c(-0.25, 0.2)) +
   # coord_cartesian(xlim=c(0, 40)) +
   
   geom_ribbon(data=f[f$cations==-0.08, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh15_d),
+              aes(ymin=lower, ymax=upper, x=BAh15),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=f[f$cations==-0.08, ], inherit.aes=FALSE,
-              aes(x=BAh15_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh15, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=f[f$cations==0.06, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh15_d),
+              aes(ymin=lower, ymax=upper, x=BAh15),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=f[f$cations==0.06, ], inherit.aes=FALSE,
-              aes(x=BAh15_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh15, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -289,29 +290,29 @@ grid.arrange(con_cat_plot, het_cat_plot, ncol=2, nrow=1)
 
 
 # elevation - con vs. het - survival, 5m scale
-ef <- effect("elev:BAc5_d", elev.sep.int5)
+ef <- effect("elev:BAc5", elev.sep.int5)
 ec <- as.data.frame(ef)
 
-ef <- effect("elev:BAh5_d", elev.sep.int5)
+ef <- effect("elev:BAh5", elev.sep.int5)
 eh <- as.data.frame(ef)
 
-con_elev <- ggplot(ec, aes(x=BAc5_d, y=fit)) +
+con_elev <- ggplot(ec, aes(x=BAc5, y=fit)) +
   scale_y_continuous(name="", limits=c(0, 1)) +
   scale_x_continuous(name="", limits=c(-0.7, 8), breaks=seq(0, 8, 2)) +
   coord_cartesian(ylim=c(0, 1)) +
   coord_cartesian(xlim=c(-0.7, 8)) +
   
   geom_ribbon(data=ec[ec$elev==-3, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
+              aes(ymin=lower, ymax=upper, x=BAc5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=ec[ec$elev==-3, ], inherit.aes=FALSE, se = FALSE,
-              aes(x=BAc5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc5, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=ec[ec$elev==2, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc5_d),
+              aes(ymin=lower, ymax=upper, x=BAc5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="white") +
   geom_smooth(data=ec[ec$elev==2, ], inherit.aes=FALSE, se = FALSE,
-              aes(x=BAc5_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAc5, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -320,23 +321,23 @@ con_elev <- ggplot(ec, aes(x=BAc5_d, y=fit)) +
     plot.margin=margin(t=1, r=15, b=1, l=1))
 
 
-het_elev <- ggplot(ec, aes(x=BAh5_d, y=fit)) +
+het_elev <- ggplot(ec, aes(x=BAh5, y=fit)) +
   scale_y_continuous(name="", limits=c(0, 1)) +
   scale_x_continuous(name="", limits=c(-1, 5), breaks = seq(-1, 5, 1)) +
   coord_cartesian(ylim=c(0, 1)) +
   coord_cartesian(xlim=c(-1, 5)) +
   
   geom_ribbon(data=eh[eh$elev==-3, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=eh[eh$elev==-3, ], inherit.aes=FALSE, se = FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh5, y=fit), size=1.5, color="gray60", method="lm") +
   
   geom_ribbon(data=eh[eh$elev==2, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="white") +
   geom_smooth(data=eh[eh$elev==2, ], inherit.aes=FALSE, se = FALSE,
-              aes(x=BAh5_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh5, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -350,40 +351,40 @@ grid.arrange(con_elev, het_elev, ncol=2, nrow=1)
  
 ## OLD CODE
 # BAc vs. BAh using gap at 10m
-ef <- effect("BAc10_d", gap.int.all.REML10)
+ef <- effect("BAc10", gap.int.all.REML10)
 x <- as.data.frame(ef)
 
-ef <- effect("BAh10_d", gap.int.all.REML10)
+ef <- effect("BAh10", gap.int.all.REML10)
 y <- as.data.frame(ef)
 
-xplot <- ggplot(x, aes(x=BAc10_d, y=fit)) + 
+xplot <- ggplot(x, aes(x=BAc10, y=fit)) + 
   scale_y_continuous(name="",
                      limits=c(-0.085, 0.13)) +
   scale_x_continuous(name="") +
   coord_cartesian(ylim=c(-0.085, 0.13)) +
 
   geom_ribbon(data=x, inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc10_d),
+              aes(ymin=lower, ymax=upper, x=BAc10),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_smooth(data=x, inherit.aes=FALSE,
-              aes(x=BAc10_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc10, y=fit), size=1.5, color="gray60", method="lm") +
   theme_classic() + 
   theme(
     axis.text=element_text(size=20),
     plot.margin=margin(t=1, r=15, b=1, l=1))
 
 
-yplot <- ggplot(y, aes(x=BAh10_d, y=fit)) + 
+yplot <- ggplot(y, aes(x=BAh10, y=fit)) + 
   scale_y_continuous(name="",
                      limits=c(-0.085, 0.13)) +
   scale_x_continuous(name="") +
   coord_cartesian(ylim=c(-0.085, 0.13)) +
   
   geom_ribbon(data=y, inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh10_d),
+              aes(ymin=lower, ymax=upper, x=BAh10),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   geom_smooth(data=y, inherit.aes=FALSE,
-              aes(x=BAh10_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh10, y=fit), size=1.5, color="gray10", method="lm") +
   theme_classic() + 
   theme(
     axis.text=element_text(size=20),
@@ -396,26 +397,26 @@ grid.arrange(xplot, yplot, ncol=1, nrow=2)
 
 # BAc * CATIONS x growth (15m scale)
 # as compared to BAh * cations x growth
-ef <- effect("cations:BAc15_d", cations.int.all.REML15)
+ef <- effect("cations:BAc15", cations.int.all.REML15)
 a <- as.data.frame(ef)
 
-con_cat_plot <- ggplot(a, aes(x=BAc15_d, y=fit)) +
+con_cat_plot <- ggplot(a, aes(x=BAc15, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.55, 0.2)) +
   scale_x_continuous(name="", limits=c(0, 40)) +
   coord_cartesian(ylim=c(-0.55, 0.2)) +
   coord_cartesian(xlim=c(0, 40)) +
   
   geom_ribbon(data=a[a$cations==-0.08, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc15_d),
+              aes(ymin=lower, ymax=upper, x=BAc15),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_ribbon(data=a[a$cations==0.06, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAc15_d),
+              aes(ymin=lower, ymax=upper, x=BAc15),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   
   geom_smooth(data=a[a$cations==-0.08, ], inherit.aes=FALSE,
-              aes(x=BAc15_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAc15, y=fit), size=1.5, color="gray60", method="lm") +
   geom_smooth(data=a[a$cations==0.06, ], inherit.aes=FALSE,
-              aes(x=BAc15_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAc15, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -424,26 +425,26 @@ con_cat_plot <- ggplot(a, aes(x=BAc15_d, y=fit)) +
     plot.margin=margin(t=1, r=15, b=1, l=1))
 
 
-ef <- effect("cations:BAh15_d", cations.int.all.REML15)
+ef <- effect("cations:BAh15", cations.int.all.REML15)
 f <- as.data.frame(ef)
 
-het_cat_plot <- ggplot(f, aes(x=BAh15_d, y=fit)) +
+het_cat_plot <- ggplot(f, aes(x=BAh15, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.55, 0.2)) +
   # scale_x_continuous(name="", limits=c(0, 40)) +
   coord_cartesian(ylim=c(-0.55, 0.2)) +
   # coord_cartesian(xlim=c(0, 40)) +
   
   geom_ribbon(data=f[f$cations==-0.08, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh15_d),
+              aes(ymin=lower, ymax=upper, x=BAh15),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_ribbon(data=f[f$cations==0.06, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh15_d),
+              aes(ymin=lower, ymax=upper, x=BAh15),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   
   geom_smooth(data=f[f$cations==-0.08, ], inherit.aes=FALSE,
-              aes(x=BAh15_d, y=fit), size=1.5, color="gray60", method="lm") +
+              aes(x=BAh15, y=fit), size=1.5, color="gray60", method="lm") +
   geom_smooth(data=f[f$cations==0.06, ], inherit.aes=FALSE,
-              aes(x=BAh15_d, y=fit), size=1.5, color="gray10", method="lm") +
+              aes(x=BAh15, y=fit), size=1.5, color="gray10", method="lm") +
   
   theme_classic() +
   theme(
@@ -458,30 +459,30 @@ grid.arrange(con_cat_plot, het_cat_plot, ncol=2, nrow=1)
 
 
 # BAh * gap, org x growth (all at 5m scale)
-ef <- effect("org:BAh5_d", org.int.het.REML5)
+ef <- effect("org:BAh5", org.int.het.REML5)
 o <- as.data.frame(ef)
 
-ef <- effect("gap:BAh5_d", gap.int.het.REML5)
+ef <- effect("gap:BAh5", gap.int.het.REML5)
 g <- as.data.frame(ef)
 
 # gap
-gplot <- ggplot(g, aes(x=BAh5_d, y=fit)) +
+gplot <- ggplot(g, aes(x=BAh5, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.1, 0.25)) +
   scale_x_continuous(name="", breaks=seq(0, 100, 20)) +
   coord_cartesian(ylim=c(-0.1, 0.25)) +
   coord_cartesian(xlim=c(0, 100)) +
   
   geom_ribbon(data=g[g$gap==10, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_ribbon(data=g[g$gap==70, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   
   geom_smooth(data=g[g$gap==10, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1, color="gray60", method="lm") +
+              aes(x=BAh5, y=fit), size=1, color="gray60", method="lm") +
   geom_smooth(data=g[g$gap==70, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1, color="gray10", method="lm") +
+              aes(x=BAh5, y=fit), size=1, color="gray10", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -494,23 +495,23 @@ gplot <- ggplot(g, aes(x=BAh5_d, y=fit)) +
 
 
 # org
-oplot <- ggplot(o, aes(x=BAh5_d, y=fit)) +
+oplot <- ggplot(o, aes(x=BAh5, y=fit)) +
   scale_y_continuous(name="", limits=c(-0.1, 0.25)) +
   scale_x_continuous(name="", breaks=seq(0, 100, 20)) +
   coord_cartesian(ylim=c(0, 0.25)) +
   coord_cartesian(xlim=c(0, 100)) +
 
   geom_ribbon(data=o[o$org==7.5, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=3, size=1, color="gray60", fill="gray70") +
   geom_ribbon(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(ymin=lower, ymax=upper, x=BAh5_d),
+              aes(ymin=lower, ymax=upper, x=BAh5),
               alpha=0.2, linetype=5, size=1, color="gray10", fill="gray70") +
   
   geom_smooth(data=o[o$org==7.5, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1, color="gray60", method="lm") +
+              aes(x=BAh5, y=fit), size=1, color="gray60", method="lm") +
   geom_smooth(data=o[o$org==9, ], inherit.aes=FALSE,
-              aes(x=BAh5_d, y=fit), size=1, color="gray10", method="lm") +
+              aes(x=BAh5, y=fit), size=1, color="gray10", method="lm") +
   
   theme_classic() +
   theme(axis.title.x=element_blank(),
@@ -537,7 +538,7 @@ grid.arrange(gplot, oplot, ncol=1, nrow=2)
 require(lme4)
 require(sjstats)
 fert.int.het.REML5 <- lmer(log(growth+1) ~ diam1 +
-                           BAh5_d_d*fert + BAc5_d_d + 
+                           BAh5*fert + BAc5 + 
                            (1|species),
                          REML = TRUE,
                          data = growth)
@@ -545,8 +546,8 @@ tabt <- std_beta(fert.int.het.REML5)
 
 dotf <- ggplot(tabt[-1,], aes(x = term, y = std.estimate)) +
   scale_y_continuous(name ="", limits = c(-1.5, 1.5), breaks = seq(-2, 2, 1)) +
-  scale_x_discrete(name ="", labels=c("fert" = "Env", "fert:BAh5_d_d" = "BAh * Env",
-                                     "BAh5_d_d" = "BAh", "BAc5_d_d" = "BAc")) +
+  scale_xiscrete(name ="", labels=c("fert" = "Env", "fert:BAh5" = "BAh * Env",
+                                     "BAh5" = "BAh", "BAc5" = "BAc")) +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 16) + 
@@ -563,7 +564,7 @@ dotf <- ggplot(tabt[-1,], aes(x = term, y = std.estimate)) +
   
 
 org.int.het.REML5 <- lmer(log(growth+1) ~ diam1 +
-                          BAh5_d_d*org + BAc5_d_d + 
+                          BAh5*org + BAc5 + 
                            (1|species),
                         REML = TRUE,
                         data = growth)
@@ -571,8 +572,8 @@ tabo <- std_beta(org.int.het.REML5)
 
 doto <- ggplot(tabo[-1,], aes(x = term, y = std.estimate)) +
   scale_y_continuous(name ="", limits = c(-1.5, 1.5), breaks = seq(-2, 2, 1)) +
-  scale_x_discrete(name ="", labels=c("org" = "Env", "BAh5_d_d:org" = "BAh * Env",
-                                      "BAh5_d_d" = "BAh", "BAc5_d_d" = "BAc")) +
+  scale_xiscrete(name ="", labels=c("org" = "Env", "BAh5:org" = "BAh * Env",
+                                      "BAh5" = "BAh", "BAc5" = "BAc")) +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 16) + 
@@ -589,7 +590,7 @@ doto <- ggplot(tabo[-1,], aes(x = term, y = std.estimate)) +
 
 
 gap.int.het.REML5 <- lmer(log(growth+1) ~ diam1 +
-                          BAh5_d_d*gap + BAc5_d_d + 
+                          BAh5*gap + BAc5 + 
                            (1|species),
                         REML = TRUE,
                         data = growth)
@@ -597,8 +598,8 @@ tabg <- std_beta(gap.int.het.REML5)
 
 dotg <- ggplot(tabg[-1,], aes(x = term, y = std.estimate)) +
   scale_y_continuous(name ="", limits = c(-1.5, 1.5)) +
-  scale_x_discrete(name ="", labels=c("gap" = "Env", "BAh5_d_d:gap" = "BAh * Env",
-                                      "BAh5_d_d" = "BAh", "BAc5_d_d" = "BAc")) +
+  scale_xiscrete(name ="", labels=c("gap" = "Env", "BAh5:gap" = "BAh * Env",
+                                      "BAh5" = "BAh", "BAc5" = "BAc")) +
   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
   coord_flip() +
   geom_point(size = 4, shape = 16) + 
@@ -617,7 +618,7 @@ dotg <- ggplot(tabg[-1,], aes(x = term, y = std.estimate)) +
 
 
 # elev.add.all.REML5 <- lmer(log(growth+1) ~ diam1 + elev +
-#                           BAh5_d_d + BAc5_d_d + 
+#                           BAh5 + BAc5 + 
 #                            (1|species),
 #                         REML = TRUE,
 #                         data = growth)
@@ -625,8 +626,8 @@ dotg <- ggplot(tabg[-1,], aes(x = term, y = std.estimate)) +
 # 
 # dote <- ggplot(tabe[-1,], aes(x = term, y = std.estimate)) +
 #   scale_y_continuous(name ="") +
-#   scale_x_discrete(name ="", labels=c("elev" = "Env",
-#                                       "BAh5_d_d" = "BAh", "BAc5_d_d" = "BAc")) +
+#   scale_xiscrete(name ="", labels=c("elev" = "Env",
+#                                       "BAh5" = "BAh", "BAc5" = "BAc")) +
 #   geom_hline(yintercept = 0, color = "gray50", linetype = "dashed", size = 1) + 
 #   coord_flip() +
 #   geom_point(size = 4, shape = 16) + 
