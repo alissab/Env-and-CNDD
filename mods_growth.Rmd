@@ -1,7 +1,7 @@
 ---
 title: "Brown et al. Growth models"
 author: "Alissa Brown"
-date: "February 28, 2019"
+date: "May 2020"
 output:
   html_document: default
   word_document: default
@@ -17,8 +17,7 @@ x <- c("lme4", "lmerTest", "dplyr", "sjPlot", "gstat", "knitr")
 lapply(x, require, character.only = TRUE)
 
 # Data setup
-growth <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
-colnames(growth)[colnames(growth) == "alt"] <- "elev"
+growth <- read.csv("Oosting_env_dat.csv", stringsAsFactors = FALSE)
 
 growth <- growth[!is.na(growth$growth),]  # only return rows for saplings that have a growth rate
 growth <- growth[growth$growth<=1,]   # remove probable measurement errors
@@ -29,50 +28,11 @@ growth$BAtot10 <- growth$BAc10 + growth$BAh10
 growth$BAtot15 <- growth$BAc15 + growth$BAh15
 growth$BAtot20 <- growth$BAc20 + growth$BAh20
 
-toscale <- c("diam1", "elev", "gap", "org", "cations", "BAc5", "BAh5", "BAtot5",
-             "BAc10", "BAh10", "BAtot10", "BAc15", "BAh15", "BAtot15", 
-             "BAc20", "BAh20", "BAtot20")
+toscale <- c("diam1", "gap", "org", "cations", "curv", "slope", "BAc5", "BAh5", "BAtot5", "BAc10", "BAh10", "BAtot10", "BAc15", "BAh15", "BAtot15", "BAc20", "BAh20", "BAtot20")
 growth[, toscale] <- scale(growth[, toscale])
 ```
 
 Starting with 5m spatial scale: Run growth models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
-
-### ELEVATION at 5m scale
-
-```{r, include = FALSE}
-# run all competing models
-elev.null <- lmer(log(growth+1) ~ diam1 + elev +
-                (1|species), 
-               REML = FALSE,
-               data = growth)
-elev.tot.add5 <- update(elev.null, .~. + BAtot5)
-elev.sep.add5 <- update(elev.null, .~. + BAh5 + BAc5)
-elev.tot.int5 <- update(elev.null, .~. + elev*BAtot5)
-elev.sep.int5 <- update(elev.null, .~. + elev*BAh5 + elev*BAc5)
-```
-
-```{r, message = FALSE}
-comp.tab.elev5 <- AIC(elev.null, elev.tot.add5, elev.sep.add5, elev.tot.int5, elev.sep.int5)
-comp.tab.elev5$delta_AIC <- comp.tab.elev5$AIC - min(comp.tab.elev5$AIC)
-kable(comp.tab.elev5)
-```
-
-```{r, include = FALSE}
-# Re-run best performing model using REML
-elev.sep.add5.REML <- lmer(log(growth+1) ~ diam1 + elev +
-                          BAh5 + BAc5 +
-                          (1|species),
-                        REML = TRUE,
-                        data = growth)
-```
-
-```{r, message = FALSE}
-# Report model results from best-performing model
-tab_model(elev.sep.add5.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 5m scale")
-```
-
-<br>
-<br>
 
 ### GAP MEASURE at 5m scale
 
@@ -184,29 +144,31 @@ tab_model(cations.sep.add5.REML, pred.labels = c("(Intercept)", "Diameter", "Cat
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 10m scale
+### CURVATURE at 5m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add10 <- update(elev.null, .~. + BAtot10)
-elev.sep.add10 <- update(elev.null, .~. + BAh10 + BAc10)
-elev.tot.int10 <- update(elev.null, .~. + elev*BAtot10)
-elev.sep.int10 <- update(elev.null, .~. + elev*BAh10 + elev*BAc10)
+curv.null <- lmer(log(growth+1) ~ diam1 + curv +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+curv.tot.add5 <- update(curv.null, .~. + BAtot5)
+curv.sep.add5 <- update(curv.null, .~. + BAh5 + BAc5)
+curv.tot.int5 <- update(curv.null, .~. + curv*BAtot5)
+curv.sep.int5 <- update(curv.null, .~. + curv*BAh5 + curv*BAc5)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev10 <- AIC(elev.null, elev.tot.add10, elev.sep.add10, elev.tot.int10, elev.sep.int10)
-comp.tab.elev10$delta_AIC <- comp.tab.elev10$AIC - min(comp.tab.elev10$AIC)
-kable(comp.tab.elev10)
+comp.tab.curv5 <- AIC(curv.null, curv.tot.add5, curv.sep.add5, curv.tot.int5, curv.sep.int5)
+comp.tab.curv5$delta_AIC <- comp.tab.curv5$AIC - min(comp.tab.curv5$AIC)
+kable(comp.tab.curv5)
 ```
 
 ```{r, include = FALSE}
 # Re-run best performing model using REML
-elev.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + elev +
-                          BAh10 + BAc10 +
+curv.sep.int5.REML <- lmer(log(growth+1) ~ diam1 + curv +
+                          curv*BAh5 + curv*BAc5 +
                           (1|species),
                         REML = TRUE,
                         data = growth)
@@ -214,9 +176,48 @@ elev.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + elev +
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(elev.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 10m scale")
+tab_model(curv.sep.int5.REML, pred.labels = c("(Intercept)", "Diameter", "Curv", "Het BA at 5m", "Con BA at 5m", "Het BA * Curv", "Con BA * Curv"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Curvature at 5m scale")
 ```
 
+<br>
+<br>
+
+### SLOPE at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.null <- lmer(log(growth+1) ~ diam1 + slope +
+                (1|species), 
+               REML = FALSE,
+               data = growth)
+slope.tot.add5 <- update(slope.null, .~. + BAtot5)
+slope.sep.add5 <- update(slope.null, .~. + BAh5 + BAc5)
+slope.tot.int5 <- update(slope.null, .~. + slope*BAtot5)
+slope.sep.int5 <- update(slope.null, .~. + slope*BAh5 + slope*BAc5)
+```
+
+```{r, message = FALSE}
+comp.tab.slope5 <- AIC(slope.null, slope.tot.add5, slope.sep.add5, slope.tot.int5, slope.sep.int5)
+comp.tab.slope5$delta_AIC <- comp.tab.slope5$AIC - min(comp.tab.slope5$AIC)
+kable(comp.tab.slope5)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+slope.sep.add5.REML <- lmer(log(growth+1) ~ diam1 + slope +
+                          BAh5 + BAc5 +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.sep.add5.REML, pred.labels = c("(Intercept)", "Diameter", "Slope", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "slope at 5m scale")
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -318,29 +319,27 @@ tab_model(cations.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Ca
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 15m scale
+### CURVATURE at 10m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add15 <- update(elev.null, .~. + BAtot15)
-elev.sep.add15 <- update(elev.null, .~. + BAh15 + BAc15)
-elev.tot.int15 <- update(elev.null, .~. + elev*BAtot15)
-elev.sep.int15 <- update(elev.null, .~. + elev*BAh15 + elev*BAc15)
+curv.tot.add10 <- update(curv.null, .~. + BAtot10)
+curv.sep.add10 <- update(curv.null, .~. + BAh10 + BAc10)
+curv.tot.int10 <- update(curv.null, .~. + curv*BAtot10)
+curv.sep.int10 <- update(curv.null, .~. + curv*BAh10 + curv*BAc10)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev15 <- AIC(elev.null, elev.tot.add15, elev.sep.add15, elev.tot.int15, elev.sep.int15)
-comp.tab.elev15$delta_AIC <- comp.tab.elev15$AIC - min(comp.tab.elev15$AIC)
-kable(comp.tab.elev15)
+comp.tab.curv10 <- AIC(curv.null, curv.tot.add10, curv.sep.add10, curv.tot.int10, curv.sep.int10)
+comp.tab.curv10$delta_AIC <- comp.tab.curv10$AIC - min(comp.tab.curv10$AIC)
+kable(comp.tab.curv10)
 ```
 
 ```{r, include = FALSE}
 # Re-run best performing model using REML
-elev.sep.add15.REML <- lmer(log(growth+1) ~ diam1 + elev +
-                          BAh15 + BAc15 +
+curv.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + curv +
+                          BAh10 + BAc10 +
                           (1|species),
                         REML = TRUE,
                         data = growth)
@@ -348,9 +347,44 @@ elev.sep.add15.REML <- lmer(log(growth+1) ~ diam1 + elev +
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(elev.sep.add15.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 15m scale")
+tab_model(curv.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Curv", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Curvature at 10m scale")
 ```
 
+<br>
+<br>
+
+### SLOPE MEASURE at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add10 <- update(slope.null, .~. + BAtot10)
+slope.sep.add10 <- update(slope.null, .~. + BAh10 + BAc10)
+slope.tot.int10 <- update(slope.null, .~. + slope*BAtot10)
+slope.sep.int10 <- update(slope.null, .~. + slope*BAh10 + slope*BAc10)
+```
+
+```{r, message = FALSE}
+comp.tab.slope10 <- AIC(slope.null, slope.tot.add10, slope.sep.add10, slope.tot.int10, slope.sep.int10)
+comp.tab.slope10$delta_AIC <- comp.tab.slope10$AIC - min(comp.tab.slope10$AIC)
+kable(comp.tab.slope10)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+slope.sep.add10.REML <- lmer(log(growth+1) ~ diam1 + slope +
+                          BAh10 + BAc10 +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.sep.add10.REML, pred.labels = c("(Intercept)", "Diameter", "Slope", "Het BA at 10m", "Con BA at 10m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Slope measure at 10m scale")
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -452,29 +486,27 @@ tab_model(cations.sep.int15.REML, pred.labels = c("(Intercept)", "Diameter", "Ca
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 20m scale
+### CURVATURE at 15m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add20 <- update(elev.null, .~. + BAtot20)
-elev.sep.add20 <- update(elev.null, .~. + BAh20 + BAc20)
-elev.tot.int20 <- update(elev.null, .~. + elev*BAtot20)
-elev.sep.int20 <- update(elev.null, .~. + elev*BAh20 + elev*BAc20)
+curv.tot.add15 <- update(curv.null, .~. + BAtot15)
+curv.sep.add15 <- update(curv.null, .~. + BAh15 + BAc15)
+curv.tot.int15 <- update(curv.null, .~. + curv*BAtot15)
+curv.sep.int15 <- update(curv.null, .~. + curv*BAh15 + curv*BAc15)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev20 <- AIC(elev.null, elev.tot.add20, elev.sep.add20, elev.tot.int20, elev.sep.int20)
-comp.tab.elev20$delta_AIC <- comp.tab.elev20$AIC - min(comp.tab.elev20$AIC)
-kable(comp.tab.elev20)
+comp.tab.curv15 <- AIC(curv.null, curv.tot.add15, curv.sep.add15, curv.tot.int15, curv.sep.int15)
+comp.tab.curv15$delta_AIC <- comp.tab.curv15$AIC - min(comp.tab.curv15$AIC)
+kable(comp.tab.curv15)
 ```
 
 ```{r, include = FALSE}
 # Re-run best performing model using REML
-elev.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + elev +
-                          BAh20 + BAc20 +
+curv.sep.add15.REML <- lmer(log(growth+1) ~ diam1 + curv +
+                          BAh15 + BAc15 +
                           (1|species),
                         REML = TRUE,
                         data = growth)
@@ -482,9 +514,44 @@ elev.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + elev +
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(elev.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 20m scale")
+tab_model(curv.sep.add15.REML, pred.labels = c("(Intercept)", "Diameter", "Curv", "Het BA at 15m", "Con BA at 15m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Curvature at 15m scale")
 ```
 
+<br>
+<br>
+
+### SLOPE MEASURE at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add15 <- update(slope.null, .~. + BAtot15)
+slope.sep.add15 <- update(slope.null, .~. + BAh15 + BAc15)
+slope.tot.int15 <- update(slope.null, .~. + slope*BAtot15)
+slope.sep.int15 <- update(slope.null, .~. + slope*BAh15 + slope*BAc15)
+```
+
+```{r, message = FALSE}
+comp.tab.slope15 <- AIC(slope.null, slope.tot.add15, slope.sep.add15, slope.tot.int15, slope.sep.int15)
+comp.tab.slope15$delta_AIC <- comp.tab.slope15$AIC - min(comp.tab.slope15$AIC)
+kable(comp.tab.slope15)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+slope.sep.int15.REML <- lmer(log(growth+1) ~ diam1 + slope +
+                          BAh15*slope + BAc15*slope +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.sep.int15.REML, pred.labels = c("(Intercept)", "Diameter", "Slope", "Het BA at 15m", "Con BA at 15m", "Het BA * Slope", "Con BA * Slope"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "slope measure at 15m scale")
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -586,54 +653,129 @@ tab_model(cations.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Ca
 
 <br>
 <br>
+
+### CURVATURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+curv.tot.add20 <- update(curv.null, .~. + BAtot20)
+curv.sep.add20 <- update(curv.null, .~. + BAh20 + BAc20)
+curv.tot.int20 <- update(curv.null, .~. + curv*BAtot20)
+curv.sep.int20 <- update(curv.null, .~. + curv*BAh20 + curv*BAc20)
+```
+
+```{r, message = FALSE}
+comp.tab.curv20 <- AIC(curv.null, curv.tot.add20, curv.sep.add20, curv.tot.int20, curv.sep.int20)
+comp.tab.curv20$delta_AIC <- comp.tab.curv20$AIC - min(comp.tab.curv20$AIC)
+kable(comp.tab.curv20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+curv.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + curv +
+                          BAh20 + BAc20 +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(curv.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Curv", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Curvature at 20m scale")
+```
+
 <br>
 <br>
+
+### SLOPE MEASURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add20 <- update(slope.null, .~. + BAtot20)
+slope.sep.add20 <- update(slope.null, .~. + BAh20 + BAc20)
+slope.tot.int20 <- update(slope.null, .~. + slope*BAtot20)
+slope.sep.int20 <- update(slope.null, .~. + slope*BAh20 + slope*BAc20)
+```
+
+```{r, message = FALSE}
+comp.tab.slope20 <- AIC(slope.null, slope.tot.add20, slope.sep.add20, slope.tot.int20, slope.sep.int20)
+comp.tab.slope20$delta_AIC <- comp.tab.slope20$AIC - min(comp.tab.slope20$AIC)
+kable(comp.tab.slope20)
+```
+
+```{r, include = FALSE}
+# Re-run best performing model using REML
+slope.sep.add20.REML <- lmer(log(growth+1) ~ diam1 + slope +
+                          BAh20 + BAc20 +
+                          (1|species),
+                        REML = TRUE,
+                        data = growth)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.sep.add20.REML, pred.labels = c("(Intercept)", "Diameter", "Slope", "Het BA at 20m", "Con BA at 20m"), dv.labels = "Log(sapling growth)", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Slope measure at 20m scale")
+```
+
+<br>
+<br>
+<br>
+<br>
+
 
 ### TESTING FOR SPATIAL AUTOCORRELATION
 
 ```{r, message = FALSE}
-ge.vgm <- variogram(resid(elev.sep.add5.REML)~1, loc= ~X+Y, data=growth)
 gg.vgm <- variogram(resid(gap.sep.int5.REML)~1, loc= ~X+Y, data=growth)
 go.vgm <- variogram(resid(org.sep.int5.REML)~1, loc= ~X+Y, data=growth)
-gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.add5.REML)~1, loc= ~X+Y, data=growth)
+gc.vgm <- variogram(resid(curv.sep.int5.REML)~1, loc= ~X+Y, data=growth)
+gs.vgm <- variogram(resid(slope.sep.add5.REML)~1, loc= ~X+Y, data=growth)
 
-plot(ge.vgm, main="Elevation, 5m scale")
 plot(gg.vgm, main="Gap measure, 5m scale")
 plot(go.vgm, main="Soil organic matter, 5m scale")
 plot(gf.vgm, main="Cations, 5m scale")
+plot(gc.vgm, main="Curvature, 5m scale")
+plot(gs.vgm, main="Slope/Aspect, 5m scale")
 
 
-ge.vgm <- variogram(resid(elev.sep.add10.REML)~1, loc= ~X+Y, data=growth)
 gg.vgm <- variogram(resid(gap.sep.int10.REML)~1, loc= ~X+Y, data=growth)
 go.vgm <- variogram(resid(org.sep.add10.REML)~1, loc= ~X+Y, data=growth)
-gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+gf.vgm <- variogram(resid(cations.sep.add10.REML)~1, loc= ~X+Y, data=growth)
+gc.vgm <- variogram(resid(curv.sep.add10.REML)~1, loc= ~X+Y, data=growth)
+gs.vgm <- variogram(resid(slope.sep.add10.REML)~1, loc= ~X+Y, data=growth)
 
-plot(ge.vgm, main="Elevation, 10m scale")
 plot(gg.vgm, main="Gap measure, 10m scale")
 plot(go.vgm, main="Soil organic matter, 10m scale")
 plot(gf.vgm, main="Cations, 10m scale")
+plot(gc.vgm, main="Curvature, 10m scale")
+plot(gs.vgm, main="Slope/Aspect, 10m scale")
 
 
-ge.vgm <- variogram(resid(elev.sep.add15.REML)~1, loc= ~X+Y, data=growth)
 gg.vgm <- variogram(resid(gap.sep.add15.REML)~1, loc= ~X+Y, data=growth)
 go.vgm <- variogram(resid(org.sep.int15.REML)~1, loc= ~X+Y, data=growth)
 gf.vgm <- variogram(resid(cations.sep.int15.REML)~1, loc= ~X+Y, data=growth)
+gc.vgm <- variogram(resid(curv.sep.add15.REML)~1, loc= ~X+Y, data=growth)
+gs.vgm <- variogram(resid(slope.sep.int15.REML)~1, loc= ~X+Y, data=growth)
 
-plot(ge.vgm, main="Elevation, 15m scale")
 plot(gg.vgm, main="Gap measure, 15m scale")
 plot(go.vgm, main="Soil organic matter, 15m scale")
 plot(gf.vgm, main="Cations, 15m scale")
+plot(gc.vgm, main="Curvature, 15m scale")
+plot(gs.vgm, main="Slope/Aspect, 15m scale")
 
 
-ge.vgm <- variogram(resid(elev.sep.add20.REML)~1, loc= ~X+Y, data=growth)
 gg.vgm <- variogram(resid(gap.sep.add20.REML)~1, loc= ~X+Y, data=growth)
 go.vgm <- variogram(resid(org.sep.int20.REML)~1, loc= ~X+Y, data=growth)
 gf.vgm <- variogram(resid(cations.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+gc.vgm <- variogram(resid(curv.sep.add20.REML)~1, loc= ~X+Y, data=growth)
+gs.vgm <- variogram(resid(slope.sep.add20.REML)~1, loc= ~X+Y, data=growth)
 
-plot(ge.vgm, main="Elevation, 20m scale")
 plot(gg.vgm, main="Gap measure, 20m scale")
 plot(go.vgm, main="Soil organic matter, 20m scale")
 plot(gf.vgm, main="Cations, 20m scale")
+plot(gc.vgm, main="Curvature, 20m scale")
+plot(gs.vgm, main="Slope/Aspect, 20m scale")
 
 ```
 
