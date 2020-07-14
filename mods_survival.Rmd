@@ -1,7 +1,7 @@
 ---
 title: "Brown et al. Survival models"
 author: "Alissa Brown"
-date: "February 28, 2019"
+date: "July 2020"
 output:
   html_document: default
   word_document: default
@@ -17,49 +17,18 @@ x <- c("lme4", "lmerTest", "dplyr", "sjPlot", "gstat", "knitr")
 lapply(x, require, character.only = TRUE)
 
 # Data setup
-surv <- read.csv("dat_with_soil_updated.csv", stringsAsFactors = FALSE)
-colnames(surv)[colnames(surv) == "alt"] <- "elev"
+surv <- read.csv("Oosting_env_dat.csv", stringsAsFactors = FALSE)
 
 surv$BAtot5 <- surv$BAc5 + surv$BAh5
 surv$BAtot10 <- surv$BAc10 + surv$BAh10
 surv$BAtot15 <- surv$BAc15 + surv$BAh15
 surv$BAtot20 <- surv$BAc20 + surv$BAh20
 
-toscale <- c("diam1", "elev", "gap", "org", "cations", "BAc5", "BAh5", "BAtot5",
-             "BAc10", "BAh10", "BAtot10", "BAc15", "BAh15", "BAtot15", 
-             "BAc20", "BAh20", "BAtot20")
+toscale <- c("diam1", "gap", "org", "cations", "curv", "slope", "BAc5", "BAh5", "BAtot5", "BAc10", "BAh10", "BAtot10", "BAc15", "BAh15", "BAtot15", "BAc20", "BAh20", "BAtot20")
 surv[, toscale] <- scale(surv[, toscale])
 ```
 
 Starting with 5m spatial scale: Run survival models for each environmental covariate, perform model selection, summarize results of best-performing model. Repeat for 10m, 15m, and 20m scales. Then evaluate variograms of best-performing models to check for spatial autocorrelation.
-
-### ELEVATION at 5m scale
-
-```{r, include = FALSE}
-# run all competing models
-elev.null <- glmer(surv ~ diam1 + elev +
-                (1|species), 
-               family = binomial(link = "logit"),
-               data = surv)
-elev.tot.add5 <- update(elev.null, .~. + BAtot5)
-elev.sep.add5 <- update(elev.null, .~. + BAh5 + BAc5)
-elev.tot.int5 <- update(elev.null, .~. + elev*BAtot5)
-elev.sep.int5 <- update(elev.null, .~. + elev*BAh5 + elev*BAc5)
-```
-
-```{r, message = FALSE}
-comp.tab.elev5 <- AIC(elev.null, elev.tot.add5, elev.sep.add5, elev.tot.int5, elev.sep.int5)
-comp.tab.elev5$delta_AIC <- comp.tab.elev5$AIC - min(comp.tab.elev5$AIC)
-kable(comp.tab.elev5)
-```
-
-```{r, message = FALSE}
-# Report model results from best-performing model
-tab_model(elev.tot.int5, pred.labels = c("(Intercept)", "Diameter", "Elevation", "Total BA at 5m", "Total BA * elevation"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 5m scale")
-```
-
-<br>
-<br>
 
 ### GAP MEASURE at 5m scale
 
@@ -83,7 +52,7 @@ kable(comp.tab.gap5)
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(gap.sep.add5, pred.labels = c("(Intercept)", "Diameter", "Gap", "Het BA at 5m", "Con BA at 5m"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 5m scale")
+tab_model(gap.null, pred.labels = c("(Intercept)", "Diameter", "Gap"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Gap measure at 5m scale")
 ```
 
 <br>
@@ -144,30 +113,62 @@ tab_model(cations.null, pred.labels = c("(Intercept)", "Diameter", "Cations"), d
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 10m scale
+### CURVATURE at 5m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add10 <- update(elev.null, .~. + BAtot10)
-elev.sep.add10 <- update(elev.null, .~. + BAh10 + BAc10)
-elev.tot.int10 <- update(elev.null, .~. + elev*BAtot10)
-elev.sep.int10 <- update(elev.null, .~. + elev*BAh10 + elev*BAc10)
+curv.null <- glmer(surv ~ diam1 + curv +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+curv.tot.add5 <- update(curv.null, .~. + BAtot5)
+curv.sep.add5 <- update(curv.null, .~. + BAh5 + BAc5)
+curv.tot.int5 <- update(curv.null, .~. + curv*BAtot5)
+curv.sep.int5 <- update(curv.null, .~. + curv*BAh5 + curv*BAc5)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev10 <- AIC(elev.null, elev.tot.add10, elev.sep.add10, elev.tot.int10, elev.sep.int10)
-comp.tab.elev10$delta_AIC <- comp.tab.elev10$AIC - min(comp.tab.elev10$AIC)
-kable(comp.tab.elev10)
+comp.tab.curv5 <- AIC(curv.null, curv.tot.add5, curv.sep.add5, curv.tot.int5, curv.sep.int5)
+comp.tab.curv5$delta_AIC <- comp.tab.curv5$AIC - min(comp.tab.curv5$AIC)
+kable(comp.tab.curv5)
 ```
 
 ```{r, message = FALSE}
 # Report model results from best-performing model
-tab_model(elev.null, pred.labels = c("(Intercept)", "Diameter", "Elevation"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Elevation at 10m scale")
+tab_model(curv.null, pred.labels = c("(Intercept)", "Diameter", "Curvature"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Curvature at 5m scale")
 ```
 
+<br>
+<br>
+
+### SLOPE at 5m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.null <- glmer(surv ~ diam1 + slope +
+                (1|species), 
+               family = binomial(link = "logit"),
+               data = surv)
+slope.tot.add5 <- update(slope.null, .~. + BAtot5)
+slope.sep.add5 <- update(slope.null, .~. + BAh5 + BAc5)
+slope.tot.int5 <- update(slope.null, .~. + slope*BAtot5)
+slope.sep.int5 <- update(slope.null, .~. + slope*BAh5 + slope*BAc5)
+```
+
+```{r, message = FALSE}
+comp.tab.slope5 <- AIC(slope.null, slope.tot.add5, slope.sep.add5, slope.tot.int5, slope.sep.int5)
+comp.tab.slope5$delta_AIC <- comp.tab.slope5$AIC - min(comp.tab.slope5$AIC)
+kable(comp.tab.slope5)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.sep.int5, pred.labels = c("(Intercept)", "Diameter", "Slope", "Het BA at 5m", "Con BA at 5m", "Het BA * slope", "Con BA * slope"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Slope at 5m scale")
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -232,25 +233,49 @@ kable(comp.tab.cations10)
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 15m scale
+### CURVATURE at 10m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add15 <- update(elev.null, .~. + BAtot15)
-elev.sep.add15 <- update(elev.null, .~. + BAh15 + BAc15)
-elev.tot.int15 <- update(elev.null, .~. + elev*BAtot15)
-elev.sep.int15 <- update(elev.null, .~. + elev*BAh15 + elev*BAc15)
+curv.tot.add10 <- update(curv.null, .~. + BAtot10)
+curv.sep.add10 <- update(curv.null, .~. + BAh10 + BAc10)
+curv.tot.int10 <- update(curv.null, .~. + curv*BAtot10)
+curv.sep.int10 <- update(curv.null, .~. + curv*BAh10 + curv*BAc10)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev15 <- AIC(elev.null, elev.tot.add15, elev.sep.add15, elev.tot.int15, elev.sep.int15)
-comp.tab.elev15$delta_AIC <- comp.tab.elev15$AIC - min(comp.tab.elev15$AIC)
-kable(comp.tab.elev15)
+comp.tab.curv10 <- AIC(curv.null, curv.tot.add10, curv.sep.add10, curv.tot.int10, curv.sep.int10)
+comp.tab.curv10$delta_AIC <- comp.tab.curv10$AIC - min(comp.tab.curv10$AIC)
+kable(comp.tab.curv10)
 ```
 
+<br>
+<br>
+
+### SLOPE at 10m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add10 <- update(slope.null, .~. + BAtot10)
+slope.sep.add10 <- update(slope.null, .~. + BAh10 + BAc10)
+slope.tot.int10 <- update(slope.null, .~. + slope*BAtot10)
+slope.sep.int10 <- update(slope.null, .~. + slope*BAh10 + slope*BAc10)
+```
+
+```{r, message = FALSE}
+comp.tab.slope10 <- AIC(slope.null, slope.tot.add10, slope.sep.add10, slope.tot.int10, slope.sep.int10)
+comp.tab.slope10$delta_AIC <- comp.tab.slope10$AIC - min(comp.tab.slope10$AIC)
+kable(comp.tab.slope10)
+```
+
+```{r, message = FALSE}
+# Report model results from best-performing model
+tab_model(slope.null, pred.labels = c("(Intercept)", "Diameter", "Slope"), dv.labels = "Sapling survival", digits = 6, show.icc = FALSE, show.re.var = FALSE, title = "Slope at 10m scale")
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -310,25 +335,44 @@ kable(comp.tab.cations15)
 
 <br>
 <br>
-<br>
-<br>
 
-### ELEVATION at 20m scale
+### CURVATURE at 15m scale
 
 ```{r, include = FALSE}
 # run all competing models
-elev.tot.add20 <- update(elev.null, .~. + BAtot20)
-elev.sep.add20 <- update(elev.null, .~. + BAh20 + BAc20)
-elev.tot.int20 <- update(elev.null, .~. + elev*BAtot20)
-elev.sep.int20 <- update(elev.null, .~. + elev*BAh20 + elev*BAc20)
+curv.tot.add15 <- update(curv.null, .~. + BAtot15)
+curv.sep.add15 <- update(curv.null, .~. + BAh15 + BAc15)
+curv.tot.int15 <- update(curv.null, .~. + curv*BAtot15)
+curv.sep.int15 <- update(curv.null, .~. + curv*BAh15 + curv*BAc15)
 ```
 
 ```{r, message = FALSE}
-comp.tab.elev20 <- AIC(elev.null, elev.tot.add20, elev.sep.add20, elev.tot.int20, elev.sep.int20)
-comp.tab.elev20$delta_AIC <- comp.tab.elev20$AIC - min(comp.tab.elev20$AIC)
-kable(comp.tab.elev20)
+comp.tab.curv15 <- AIC(curv.null, curv.tot.add15, curv.sep.add15, curv.tot.int15, curv.sep.int15)
+comp.tab.curv15$delta_AIC <- comp.tab.curv15$AIC - min(comp.tab.curv15$AIC)
+kable(comp.tab.curv15)
 ```
 
+<br>
+<br>
+
+### SLOPE at 15m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add15 <- update(slope.null, .~. + BAtot15)
+slope.sep.add15 <- update(slope.null, .~. + BAh15 + BAc15)
+slope.tot.int15 <- update(slope.null, .~. + slope*BAtot15)
+slope.sep.int15 <- update(slope.null, .~. + slope*BAh15 + slope*BAc15)
+```
+
+```{r, message = FALSE}
+comp.tab.slope15 <- AIC(slope.null, slope.tot.add15, slope.sep.add15, slope.tot.int15, slope.sep.int15)
+comp.tab.slope15$delta_AIC <- comp.tab.slope15$AIC - min(comp.tab.slope15$AIC)
+kable(comp.tab.slope15)
+```
+
+<br>
+<br>
 <br>
 <br>
 
@@ -388,27 +432,64 @@ kable(comp.tab.cations20)
 
 <br>
 <br>
+
+### CURVATURE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+curv.tot.add20 <- update(curv.null, .~. + BAtot20)
+curv.sep.add20 <- update(curv.null, .~. + BAh20 + BAc20)
+curv.tot.int20 <- update(curv.null, .~. + curv*BAtot20)
+curv.sep.int20 <- update(curv.null, .~. + curv*BAh20 + curv*BAc20)
+```
+
+```{r, message = FALSE}
+comp.tab.curv20 <- AIC(curv.null, curv.tot.add20, curv.sep.add20, curv.tot.int20, curv.sep.int20)
+comp.tab.curv20$delta_AIC <- comp.tab.curv20$AIC - min(comp.tab.curv20$AIC)
+kable(comp.tab.curv20)
+```
+
+<br>
+<br>
+
+### SLOPE at 20m scale
+
+```{r, include = FALSE}
+# run all competing models
+slope.tot.add20 <- update(slope.null, .~. + BAtot20)
+slope.sep.add20 <- update(slope.null, .~. + BAh20 + BAc20)
+slope.tot.int20 <- update(slope.null, .~. + slope*BAtot20)
+slope.sep.int20 <- update(slope.null, .~. + slope*BAh20 + slope*BAc20)
+```
+
+```{r, message = FALSE}
+comp.tab.slope20 <- AIC(slope.null, slope.tot.add20, slope.sep.add20, slope.tot.int20, slope.sep.int20)
+comp.tab.slope20$delta_AIC <- comp.tab.slope20$AIC - min(comp.tab.slope20$AIC)
+kable(comp.tab.slope20)
+```
+
+<br>
+<br>
 <br>
 <br>
 
 TESTING FOR SPATIAL AUTOCORRELATION
 
 ```{r, message = FALSE}
-ge.vgm <- variogram(resid(elev.tot.int5)~1, loc= ~X+Y, data = surv)
-gg.vgm <- variogram(resid(gap.sep.add5)~1, loc= ~X+Y, data = surv)
+gg.vgm <- variogram(resid(gap.null)~1, loc= ~X+Y, data = surv)
 go.vgm <- variogram(resid(org.null)~1, loc= ~X+Y, data = surv)
 gf.vgm <- variogram(resid(cations.null)~1, loc= ~X+Y, data = surv)
-
-plot(ge.vgm, main="Elevation, 5m scale")
-plot(gg.vgm, main="Gap measure, 5m scale")
-plot(go.vgm, main="Soil organic matter, 5m scale")
-plot(gf.vgm, main="Cations, 5m scale")
+gc.vgm <- variogram(resid(curv.null)~1, loc= ~X+Y, data = surv)
+gs.vgm <- variogram(resid(slope.sep.int5)~1, loc= ~X+Y, data = surv)
 
 
-ge.vgm <- variogram(resid(elev.null)~1, loc= ~X+Y, data = surv)
-gg.vgm <- variogram(resid(gap.null)~1, loc= ~X+Y, data = surv)
+plot(gg.vgm, main="Gap measure, null (5-20m)")
+plot(go.vgm, main="Soil organic matter, null (5-20m)")
+plot(gf.vgm, main="Cations, null (5-20m)")
+plot(gc.vgm, main="Curvature, null (5-20m)")
+plot(gs.vgm, main="Slope, 5m scale")
 
-plot(ge.vgm, main="Elevation, 10m scale")
-plot(gg.vgm, main="Gap measure, 10m scale")
+gs.vgm <- variogram(resid(slope.null)~1, loc= ~X+Y, data = surv)
+plot(gs.vgm, main="Slope, null (10-20m)")
 ```
 
