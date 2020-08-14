@@ -1,11 +1,10 @@
 ---
 title: "Brown et al. Growth models"
 author: "Alissa Brown"
-date: "May 2020"
+date: "August 2020"
 output:
-  html_document: default
-  word_document: default
-  pdf_document: default
+  html_document:
+    keep_md: true
 ---
 
 ```{r setup, include=FALSE}
